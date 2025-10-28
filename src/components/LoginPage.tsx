@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, Mail, Lock, ArrowLeft } from 'lucide-react';
+import { Heart, Mail, Lock, ArrowLeft, Phone } from 'lucide-react';
 import { User } from '../App';
 import { toast } from 'sonner@2.0.3';
 
@@ -11,6 +11,8 @@ interface LoginPageProps {
 export function LoginPage({ navigate, onLogin }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Mock users for demo
   const mockUsers: Record<string, User> = {
@@ -52,16 +54,46 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
     },
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const user = mockUsers[email.toLowerCase()];
-    
-    if (user && password === 'password') {
-      toast.success(`Welcome back, ${user.name}!`);
-      onLogin(user);
-    } else {
-      toast.error('Invalid email or password');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://elanis.runasp.net/api/Account/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          phoneNumber,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Assuming the API returns user data on successful login
+        const user: User = {
+          id: data.userId || '1',
+          name: data.name || email.split('@')[0],
+          email: email,
+          phone: phoneNumber,
+          role: data.role || 'user',
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email.split('@')[0]}`,
+        };
+        
+        toast.success(`Welcome back, ${user.name}!`);
+        onLogin(user);
+      } else {
+        toast.error(data.message || 'Login failed. Please check your credentials.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -117,11 +149,27 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
               </div>
             </div>
 
+            <div>
+              <label className="block mb-2 text-gray-700">Phone Number</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none transition-colors"
+                  placeholder="Enter your phone number"
+                  required
+                />
+              </div>
+            </div>
+
             <button
               type="submit"
-              className="w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+              disabled={isLoading}
+              className={`w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              Login
+              {isLoading ? 'Logging in...' : 'Login'}
             </button>
           </form>
 
@@ -138,14 +186,8 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
           </div>
 
           <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">Demo Accounts:</p>
-            <ul className="text-sm space-y-1 text-gray-700">
-              <li>• Admin: admin@carepro.com</li>
-              <li>• User: user@test.com</li>
-              <li>• Provider (approved): provider@test.com</li>
-              <li>• Provider (pending): pending@test.com</li>
-              <li className="mt-2">Password for all: password</li>
-            </ul>
+            <p className="text-sm text-gray-600 mb-2">API Endpoint:</p>
+            <p className="text-sm text-gray-700 break-all">http://elanis.runasp.net/api/Account/login</p>
           </div>
         </div>
       </div>
