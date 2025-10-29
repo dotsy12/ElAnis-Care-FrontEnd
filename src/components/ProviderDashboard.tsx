@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User } from '../App';
 import {
   Home, UserCircle, Calendar as CalendarIcon, MapPin, FileText, DollarSign,
   LogOut, Check, X, Clock, Star, Bell
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Calendar } from './ui/calendar';
@@ -17,89 +17,106 @@ interface ProviderDashboardProps {
   onLogout: () => void;
 }
 
-interface ServiceRequest {
-  id: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  userAddress: string;
-  shiftType: '3h' | '12h' | 'fullday';
-  date: string;
-  time: string;
-  price: number;
-  status: 'pending' | 'accepted' | 'rejected';
-  rejectionReason?: string;
+interface DashboardStatistics {
+  completedJobs: number;
+  pendingRequests: number;
+  upcomingJobs: number;
+  totalEarnings: number;
+  currentMonthEarnings: number;
+  averageRating: number;
+  totalReviews: number;
+  workedDays: number;
 }
 
-interface CompletedJob {
+interface ServiceRequest {
   id: string;
-  userName: string;
-  date: string;
-  shiftType: string;
-  earnings: number;
-  rating: number;
+  clientName: string;
+  categoryName: string;
+  preferredDate: string;
+  shiftType: number; // 1=3h, 2=12h, 3=fullday
+  shiftTypeName: string;
+  status: number;
+  statusText: string;
+  price: number;
+  address: string;
+  governorate: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+interface WorkingArea {
+  id: string;
+  governorate: string;
+  city: string;
+  district: string;
+  isActive: boolean;
+}
+
+interface ProviderProfile {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  profilePicture: string | null;
+  bio: string;
+  experience: string;
+  nationalId: string;
+  isAvailable: boolean;
+  status: number;
+  completedJobs: number;
+  totalEarnings: number;
+  averageRating: number;
+  totalReviews: number;
+  categories: Category[];
+  workingAreas: WorkingArea[];
+}
+
+interface ProviderDashboardData {
+  profileId: string;
+  fullName: string;
+  email: string;
+  profilePicture: string | null;
+  isAvailable: boolean;
+  status: number;
+  statistics: DashboardStatistics;
+  recentRequests: ServiceRequest[];
+  upcomingJobs: ServiceRequest[];
+  categories: Category[];
+  workingAreas: string[];
 }
 
 export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboardProps) {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedDates, setSelectedDates] = useState<Date[]>([new Date()]);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>(['Morning']);
-  const [workAreas, setWorkAreas] = useState<string[]>(['New York', 'Brooklyn']);
-  const [newArea, setNewArea] = useState('');
+  const [workAreas, setWorkAreas] = useState<WorkingArea[]>([]);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(false);
+  const [newArea, setNewArea] = useState({
+    governorate: '',
+    city: '',
+    district: ''
+  });
   
-  const [requests, setRequests] = useState<ServiceRequest[]>([
-    {
-      id: 'r1',
-      userId: 'u1',
-      userName: 'John Doe',
-      userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-      userAddress: '123 Main St, New York',
-      shiftType: '12h',
-      date: '2025-10-28',
-      time: '09:00',
-      price: 300,
-      status: 'pending',
-    },
-    {
-      id: 'r2',
-      userId: 'u2',
-      userName: 'Jane Smith',
-      userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
-      userAddress: '456 Oak Ave, Brooklyn',
-      shiftType: '3h',
-      date: '2025-10-27',
-      time: '14:00',
-      price: 75,
-      status: 'pending',
-    },
-  ]);
-
-  const [completedJobs] = useState<CompletedJob[]>([
-    {
-      id: 'j1',
-      userName: 'Mary Johnson',
-      date: '2025-10-20',
-      shiftType: '12h',
-      earnings: 300,
-      rating: 5,
-    },
-    {
-      id: 'j2',
-      userName: 'Robert Wilson',
-      date: '2025-10-18',
-      shiftType: 'Full Day',
-      earnings: 600,
-      rating: 5,
-    },
-    {
-      id: 'j3',
-      userName: 'Lisa Brown',
-      date: '2025-10-15',
-      shiftType: '3h',
-      earnings: 75,
-      rating: 4,
-    },
-  ]);
+  // Dashboard Data from API
+  const [dashboardData, setDashboardData] = useState<ProviderDashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Profile Data
+  const [profileData, setProfileData] = useState<ProviderProfile | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    bio: '',
+    experience: '',
+    profilePicture: null as File | null,
+  });
+  const [isAvailable, setIsAvailable] = useState(true);
 
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [selectedRequestForReject, setSelectedRequestForReject] = useState<ServiceRequest | null>(null);
@@ -107,33 +124,282 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
 
   const timeSlots = ['Morning', 'Afternoon', 'Evening', 'Night'];
 
-  const totalEarnings = completedJobs.reduce((sum, job) => sum + job.earnings, 0);
-  const averageRating = completedJobs.length > 0
-    ? (completedJobs.reduce((sum, job) => sum + job.rating, 0) / completedJobs.length).toFixed(1)
-    : '0';
+  // Fetch dashboard data from API
+  const fetchDashboardData = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    
+    if (!accessToken) {
+      toast.error('Authentication required');
+      setIsLoading(false);
+      return;
+    }
 
-  const handleAcceptRequest = (requestId: string) => {
-    setRequests(prev =>
-      prev.map(req =>
-        req.id === requestId ? { ...req, status: 'accepted' } : req
-      )
-    );
+    try {
+      setIsLoading(true);
+      const response = await fetch('http://elanis.runasp.net/api/Provider/dashboard', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        setDashboardData(result.data);
+        setWorkAreas(result.data.workingAreas || []);
+      } else {
+        toast.error(result.message || 'Failed to load dashboard');
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard:', error);
+      toast.error('Failed to load dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch dashboard on mount
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const totalEarnings = dashboardData?.statistics.totalEarnings || 0;
+  const averageRating = dashboardData?.statistics.averageRating.toFixed(1) || '0';
+  const completedJobs = dashboardData?.statistics.completedJobs || 0;
+  const pendingRequests = dashboardData?.statistics.pendingRequests || 0;
+  const upcomingJobs = dashboardData?.upcomingJobs || [];
+  const recentRequests = dashboardData?.recentRequests || [];
+
+  // Fetch provider profile
+  const fetchProviderProfile = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      setIsLoadingProfile(true);
+      const response = await fetch('http://elanis.runasp.net/api/Provider/profile', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        setProfileData(result.data);
+        setProfileForm({
+          bio: result.data.bio || '',
+          experience: result.data.experience || '',
+          profilePicture: null,
+        });
+        setIsAvailable(result.data.isAvailable);
+      } else {
+        toast.error(result.message || 'Failed to load profile');
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      toast.error('Failed to load profile');
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  // Update provider profile
+  const handleSaveProfile = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      setIsSavingProfile(true);
+      const formData = new FormData();
+      formData.append('Bio', profileForm.bio);
+      formData.append('Experience', profileForm.experience);
+      if (profileForm.profilePicture) {
+        formData.append('ProfilePicture', profileForm.profilePicture);
+      }
+
+      const response = await fetch('http://elanis.runasp.net/api/Provider/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Profile updated successfully');
+        setProfileData(result.data);
+        fetchDashboardData(); // Refresh dashboard
+      } else {
+        toast.error(result.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  // Update availability status
+  const handleToggleAvailability = async (newStatus: boolean) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://elanis.runasp.net/api/Provider/profile/availability', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isAvailable: newStatus }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        setIsAvailable(newStatus);
+        toast.success(result.message || `Status updated to ${newStatus ? 'Available' : 'Unavailable'}`);
+        fetchDashboardData(); // Refresh dashboard
+      } else {
+        toast.error(result.message || 'Failed to update availability');
+      }
+    } catch (error) {
+      console.error('Error updating availability:', error);
+      toast.error('Failed to update availability');
+    }
+  };
+
+  // Fetch working areas
+  const fetchWorkingAreas = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      setIsLoadingAreas(true);
+      const response = await fetch('http://elanis.runasp.net/api/Provider/working-areas', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        setWorkAreas(result.data || []);
+      } else {
+        toast.error(result.message || 'Failed to load working areas');
+      }
+    } catch (error) {
+      console.error('Error fetching working areas:', error);
+      toast.error('Failed to load working areas');
+    } finally {
+      setIsLoadingAreas(false);
+    }
+  };
+
+  // Add working area
+  const addWorkingArea = async () => {
+    if (!newArea.governorate.trim() || !newArea.city.trim() || !newArea.district.trim()) {
+      toast.error('Please fill all fields');
+      return;
+    }
+
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://elanis.runasp.net/api/Provider/working-areas', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newArea),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Working area added successfully');
+        setNewArea({ governorate: '', city: '', district: '' });
+        fetchWorkingAreas(); // Refresh list
+      } else {
+        toast.error(result.message || 'Failed to add working area');
+      }
+    } catch (error) {
+      console.error('Error adding working area:', error);
+      toast.error('Failed to add working area');
+    }
+  };
+
+  // Delete working area
+  const deleteWorkingArea = async (areaId: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://elanis.runasp.net/api/Provider/working-areas/${areaId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Working area deleted successfully');
+        fetchWorkingAreas(); // Refresh list
+      } else {
+        toast.error(result.message || 'Failed to delete working area');
+      }
+    } catch (error) {
+      console.error('Error deleting working area:', error);
+      toast.error('Failed to delete working area');
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string) => {
+    // TODO: Implement API call to accept request
     toast.success('Request accepted!');
   };
 
-  const handleRejectRequest = () => {
+  const handleRejectRequest = async () => {
     if (!selectedRequestForReject || !rejectionReason.trim()) {
       toast.error('Please provide a reason for rejection');
       return;
     }
 
-    setRequests(prev =>
-      prev.map(req =>
-        req.id === selectedRequestForReject.id
-          ? { ...req, status: 'rejected', rejectionReason }
-          : req
-      )
-    );
+    // TODO: Implement API call to reject request
     toast.success('Request rejected');
     setShowRejectDialog(false);
     setSelectedRequestForReject(null);
@@ -146,18 +412,19 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     );
   };
 
-  const addWorkArea = () => {
-    if (newArea.trim() && !workAreas.includes(newArea.trim())) {
-      setWorkAreas(prev => [...prev, newArea.trim()]);
-      setNewArea('');
-      toast.success('Work area added');
+  // Fetch profile when Profile tab is opened
+  useEffect(() => {
+    if (activeTab === 'profile') {
+      fetchProviderProfile();
     }
-  };
+  }, [activeTab]);
 
-  const removeWorkArea = (area: string) => {
-    setWorkAreas(prev => prev.filter(a => a !== area));
-    toast.success('Work area removed');
-  };
+  // Fetch working areas when Areas tab is opened
+  useEffect(() => {
+    if (activeTab === 'areas') {
+      fetchWorkingAreas();
+    }
+  }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-[#E3F2FD]">
@@ -168,7 +435,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
           <div className="flex items-center gap-4">
             <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
               <Bell className="w-6 h-6" />
-              {requests.filter(r => r.status === 'pending').length > 0 && (
+              {pendingRequests > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 bg-[#FFA726] rounded-full"></span>
               )}
             </button>
@@ -243,9 +510,9 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
               >
                 <FileText className="w-5 h-5" />
                 <span>Requests</span>
-                {requests.filter(r => r.status === 'pending').length > 0 && (
+                {pendingRequests > 0 && (
                   <Badge variant="destructive" className="ml-auto">
-                    {requests.filter(r => r.status === 'pending').length}
+                    {pendingRequests}
                   </Badge>
                 )}
               </button>
@@ -285,7 +552,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Completed Jobs</p>
-                        <p className="text-2xl text-gray-900">{completedJobs.length}</p>
+                        <p className="text-2xl text-gray-900">{completedJobs}</p>
                       </div>
                     </div>
                   </div>
@@ -306,51 +573,49 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
                 <div className="bg-white rounded-xl shadow-md p-6">
                   <h3 className="mb-4 text-gray-900">Pending Requests</h3>
                   <div className="space-y-3">
-                    {requests
-                      .filter(r => r.status === 'pending')
+                    {recentRequests
+                      .filter(r => r.status === 1) // 1 = Pending
                       .slice(0, 3)
                       .map(request => (
                         <div key={request.id} className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg">
                           <div className="flex items-center gap-3">
-                            <ImageWithFallback
-                              src={request.userAvatar}
-                              alt={request.userName}
-                              className="w-12 h-12 rounded-full"
-                            />
+                            <div className="w-12 h-12 bg-[#FFA726] rounded-full flex items-center justify-center text-white font-bold">
+                              {request.clientName.charAt(0)}
+                            </div>
                             <div>
-                              <p className="text-gray-900">{request.userName}</p>
+                              <p className="text-gray-900">{request.clientName}</p>
                               <p className="text-sm text-gray-500">
-                                {request.date} at {request.time} - {request.shiftType}
+                                {new Date(request.preferredDate).toLocaleDateString()} - {request.shiftTypeName}
                               </p>
                             </div>
                           </div>
                           <p className="text-gray-900">${request.price}</p>
                         </div>
                       ))}
-                    {requests.filter(r => r.status === 'pending').length === 0 && (
+                    {recentRequests.filter(r => r.status === 1).length === 0 && (
                       <p className="text-center text-gray-500 py-4">No pending requests</p>
                     )}
                   </div>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-4 text-gray-900">Recent Jobs</h3>
+                  <h3 className="mb-4 text-gray-900">Upcoming Jobs</h3>
                   <div className="space-y-3">
-                    {completedJobs.slice(0, 3).map(job => (
+                    {upcomingJobs.slice(0, 3).map(job => (
                       <div key={job.id} className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg">
                         <div>
-                          <p className="text-gray-900">{job.userName}</p>
-                          <p className="text-sm text-gray-500">{job.date} - {job.shiftType}</p>
+                          <p className="text-gray-900">{job.clientName}</p>
+                          <p className="text-sm text-gray-500">{new Date(job.preferredDate).toLocaleDateString()} - {job.shiftTypeName}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-gray-900">${job.earnings}</p>
-                          <div className="flex items-center gap-1 justify-end">
-                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm">{job.rating}</span>
-                          </div>
+                          <p className="text-gray-900">${job.price}</p>
+                          <Badge variant="secondary" className="mt-1">{job.statusText}</Badge>
                         </div>
                       </div>
                     ))}
+                    {upcomingJobs.length === 0 && (
+                      <p className="text-center text-gray-500 py-4">No upcoming jobs</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -359,75 +624,136 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
             {activeTab === 'profile' && (
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="mb-6 text-gray-900">My Profile</h3>
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <ImageWithFallback
-                      src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Provider'}
-                      alt={user?.name || 'Provider'}
-                      className="w-20 h-20 rounded-full"
-                    />
-                    <div>
-                      <h4 className="text-gray-900">{user?.name}</h4>
-                      <p className="text-gray-600">{user?.email}</p>
-                      <Badge className="mt-2">Approved Provider</Badge>
-                    </div>
+                {isLoadingProfile ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
                   </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-gray-700 mb-2">Phone Number</label>
-                      <input
-                        type="tel"
-                        defaultValue={user?.phone}
-                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                ) : profileData ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4 mb-6">
+                      <ImageWithFallback
+                        src={profileData.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData.email}`}
+                        alt={`${profileData.firstName} ${profileData.lastName}`}
+                        className="w-20 h-20 rounded-full"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-2">Address</label>
-                      <input
-                        type="text"
-                        defaultValue={user?.address}
-                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 mb-2">Professional Bio</label>
-                    <Textarea
-                      defaultValue="Experienced caregiver with 8+ years of experience in elderly care, specializing in dementia care and mobility assistance. Passionate about helping seniors maintain their independence and quality of life."
-                      rows={5}
-                      className="focus:border-[#FFA726]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 mb-2">Hourly Rate ($)</label>
-                    <input
-                      type="number"
-                      defaultValue="25"
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <h4 className="mb-3 text-gray-900">Uploaded Documents</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-700">Nursing Certificate.pdf</span>
-                        <Badge variant="secondary">Verified</Badge>
+                      <div className="flex-1">
+                        <h4 className="text-gray-900">{profileData.firstName} {profileData.lastName}</h4>
+                        <p className="text-gray-600">{profileData.email}</p>
+                        <Badge className="mt-2">Approved Provider</Badge>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-gray-700">CV_Resume.pdf</span>
-                        <Badge variant="secondary">Verified</Badge>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-gray-600">
+                          {isAvailable ? 'Available' : 'Unavailable'}
+                        </span>
+                        <button
+                          onClick={() => handleToggleAvailability(!isAvailable)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            isAvailable ? 'bg-green-600' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              isAvailable ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
                       </div>
                     </div>
-                  </div>
 
-                  <button className="px-6 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors">
-                    Save Changes
-                  </button>
-                </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-gray-700 mb-2">Phone Number</label>
+                        <input
+                          type="tel"
+                          value={profileData.phoneNumber}
+                          readOnly
+                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg bg-gray-50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-700 mb-2">National ID</label>
+                        <input
+                          type="text"
+                          value={profileData.nationalId}
+                          readOnly
+                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg bg-gray-50"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 mb-2">Professional Bio</label>
+                      <Textarea
+                        value={profileForm.bio}
+                        onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                        rows={5}
+                        className="focus:border-[#FFA726]"
+                        placeholder="Tell us about yourself..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 mb-2">Experience</label>
+                      <Textarea
+                        value={profileForm.experience}
+                        onChange={(e) => setProfileForm({ ...profileForm, experience: e.target.value })}
+                        rows={5}
+                        className="focus:border-[#FFA726]"
+                        placeholder="Describe your experience..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 mb-2">Profile Picture</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setProfileForm({ ...profileForm, profilePicture: e.target.files?.[0] || null })}
+                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726]"
+                      />
+                    </div>
+
+                    <div>
+                      <h4 className="mb-3 text-gray-900">Service Categories</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {profileData.categories.map(cat => (
+                          <Badge key={cat.id} variant="secondary">
+                            {cat.icon} {cat.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="mb-3 text-gray-900">Working Areas</h4>
+                      <div className="space-y-2">
+                        {profileData.workingAreas.map(area => (
+                          <div key={area.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span className="text-gray-700">
+                              {area.governorate}, {area.city} - {area.district}
+                            </span>
+                            <Badge variant={area.isActive ? "default" : "secondary"}>
+                              {area.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </div>
+                        ))}
+                        {profileData.workingAreas.length === 0 && (
+                          <p className="text-gray-500 text-sm">No working areas configured</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={isSavingProfile}
+                      className="px-6 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSavingProfile ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500 py-12">Failed to load profile</p>
+                )}
               </div>
             )}
 
@@ -441,7 +767,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
                       <Calendar
                         mode="multiple"
                         selected={selectedDates}
-                        onSelect={(dates) => setSelectedDates(dates as Date[])}
+                        onSelect={(dates: Date[] | undefined) => setSelectedDates(dates as Date[])}
                         className="rounded-md"
                       />
                     </div>
@@ -483,45 +809,84 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
             {activeTab === 'areas' && (
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="mb-6 text-gray-900">Work Areas</h3>
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newArea}
-                      onChange={(e) => setNewArea(e.target.value)}
-                      placeholder="Enter city or area..."
-                      className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                      onKeyPress={(e) => e.key === 'Enter' && addWorkArea()}
-                    />
-                    <button
-                      onClick={addWorkArea}
-                      className="px-6 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-                    >
-                      Add
-                    </button>
+                {isLoadingAreas ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
                   </div>
-
-                  <div className="space-y-2">
-                    <h4 className="text-gray-900">Your Work Areas:</h4>
-                    {workAreas.map(area => (
-                      <div
-                        key={area}
-                        className="flex items-center justify-between p-3 bg-[#E3F2FD] rounded-lg"
-                      >
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-5 h-5 text-[#FFA726]" />
-                          <span className="text-gray-900">{area}</span>
-                        </div>
-                        <button
-                          onClick={() => removeWorkArea(area)}
-                          className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <h4 className="text-gray-900 font-medium">Add New Working Area</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <input
+                          type="text"
+                          value={newArea.governorate}
+                          onChange={(e) => setNewArea({ ...newArea, governorate: e.target.value })}
+                          placeholder="Governorate (e.g., Cairo)"
+                          className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={newArea.city}
+                          onChange={(e) => setNewArea({ ...newArea, city: e.target.value })}
+                          placeholder="City (e.g., Nasr City)"
+                          className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={newArea.district}
+                          onChange={(e) => setNewArea({ ...newArea, district: e.target.value })}
+                          placeholder="District (e.g., District 1)"
+                          className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                        />
                       </div>
-                    ))}
+                      <button
+                        onClick={addWorkingArea}
+                        className="px-6 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+                      >
+                        Add Working Area
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="text-gray-900 font-medium">Your Work Areas:</h4>
+                      {workAreas.length > 0 ? (
+                        workAreas.map(area => (
+                          <div
+                            key={area.id}
+                            className="flex items-center justify-between p-4 bg-[#E3F2FD] rounded-lg border-2 border-gray-200"
+                          >
+                            <div className="flex items-center gap-3">
+                              <MapPin className="w-5 h-5 text-[#FFA726]" />
+                              <div>
+                                <p className="text-gray-900 font-medium">
+                                  {area.governorate}, {area.city}
+                                </p>
+                                <p className="text-sm text-gray-600">{area.district}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={area.isActive ? "default" : "secondary"}>
+                                {area.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                              <button
+                                onClick={() => deleteWorkingArea(area.id)}
+                                className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                                title="Delete area"
+                              >
+                                <X className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-center text-gray-500 py-8">
+                          No working areas added yet. Add your first working area above.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -529,46 +894,37 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="mb-6 text-gray-900">Service Requests</h3>
                 <div className="space-y-4">
-                  {requests.map(request => (
+                  {recentRequests.map(request => (
                     <div key={request.id} className="border-2 border-gray-200 rounded-lg p-4">
                       <div className="flex items-start gap-4">
-                        <ImageWithFallback
-                          src={request.userAvatar}
-                          alt={request.userName}
-                          className="w-16 h-16 rounded-full"
-                        />
+                        <div className="w-16 h-16 bg-[#FFA726] rounded-full flex items-center justify-center text-white font-bold text-xl">
+                          {request.clientName.charAt(0)}
+                        </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-gray-900">{request.userName}</h4>
+                            <h4 className="text-gray-900">{request.clientName}</h4>
                             <Badge
                               variant={
-                                request.status === 'accepted'
+                                request.status === 2
                                   ? 'default'
-                                  : request.status === 'rejected'
+                                  : request.status === 3
                                   ? 'destructive'
                                   : 'secondary'
                               }
                             >
-                              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                              {request.statusText}
                             </Badge>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
-                            <p>📍 {request.userAddress}</p>
-                            <p>📅 {request.date}</p>
-                            <p>🕐 {request.time}</p>
-                            <p>⏱️ {request.shiftType}</p>
+                            <p>📍 {request.address}</p>
+                            <p>📅 {new Date(request.preferredDate).toLocaleDateString()}</p>
+                            <p>🏷️ {request.categoryName}</p>
+                            <p>⏱️ {request.shiftTypeName}</p>
                           </div>
                           <p className="text-lg text-gray-900 mb-3">
                             Payment: <span>${request.price}</span>
                           </p>
-                          {request.status === 'rejected' && request.rejectionReason && (
-                            <div className="bg-red-50 border border-red-200 rounded p-2 mb-3">
-                              <p className="text-sm text-red-800">
-                                <strong>Rejection Reason:</strong> {request.rejectionReason}
-                              </p>
-                            </div>
-                          )}
-                          {request.status === 'pending' && (
+                          {request.status === 1 && (
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleAcceptRequest(request.id)}
@@ -593,7 +949,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
                       </div>
                     </div>
                   ))}
-                  {requests.length === 0 && (
+                  {recentRequests.length === 0 && (
                     <p className="text-center text-gray-500 py-8">No requests yet</p>
                   )}
                 </div>
@@ -611,41 +967,47 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
                     </div>
                     <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl">
                       <p className="text-sm mb-2 opacity-90">Completed Jobs</p>
-                      <p className="text-4xl">{completedJobs.length}</p>
+                      <p className="text-4xl">{completedJobs}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-1">Current Month</p>
+                      <p className="text-2xl text-gray-900">${dashboardData?.statistics.currentMonthEarnings || 0}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-1">Worked Days</p>
+                      <p className="text-2xl text-gray-900">{dashboardData?.statistics.workedDays || 0}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-4 text-gray-900">Completed Jobs</h3>
-                  <div className="space-y-3">
-                    {completedJobs.map(job => (
-                      <div
-                        key={job.id}
-                        className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-[#FFA726] transition-colors"
-                      >
-                        <div>
-                          <p className="text-gray-900">{job.userName}</p>
-                          <p className="text-sm text-gray-600">
-                            {job.date} - {job.shiftType}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl text-gray-900">${job.earnings}</p>
-                          <div className="flex items-center gap-1 justify-end mt-1">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-4 h-4 ${
-                                  i < job.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
+                  <h3 className="mb-4 text-gray-900">Transaction History</h3>
+                  {upcomingJobs.length > 0 ? (
+                    <div className="space-y-3">
+                      {upcomingJobs.map(job => (
+                        <div
+                          key={job.id}
+                          className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg"
+                        >
+                          <div>
+                            <p className="text-gray-900">{job.clientName}</p>
+                            <p className="text-sm text-gray-600">
+                              {new Date(job.preferredDate).toLocaleDateString()} - {job.shiftTypeName}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl text-gray-900">${job.price}</p>
+                            <Badge variant="secondary" className="mt-1">{job.statusText}</Badge>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">No transactions yet</p>
+                  )}
                 </div>
               </div>
             )}

@@ -1,26 +1,44 @@
-import { useState } from 'react';
-import { Heart, ArrowLeft, User, Briefcase, Mail, Phone, MapPin, Lock, Calendar, FileText, Upload } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { useState, useEffect } from 'react';
+import { Heart, ArrowLeft, User, Briefcase, Mail, Phone, MapPin, Lock, Calendar, FileText, Upload, DollarSign } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface RegistrationPageProps {
-  navigate: (page: string) => void;
+  navigate: (page: string, data?: any) => void;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  nameEn: string;
+  description: string;
+  icon: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export function RegistrationPage({ navigate }: RegistrationPageProps) {
   const [step, setStep] = useState<'type' | 'form'>('type');
   const [accountType, setAccountType] = useState<'user' | 'provider' | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     address: '',
     password: '',
     confirmPassword: '',
     dob: '',
-    idNumber: '',
+    nationalId: '',
     experience: '',
+    hourlyRate: '',
     bio: '',
+    selectedCategory: '',
   });
+
+  const [idDocument, setIdDocument] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   const [certificates, setCertificates] = useState<File[]>([]);
   const [cv, setCv] = useState<File | null>(null);
@@ -28,6 +46,38 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
   const handleTypeSelect = (type: 'user' | 'provider') => {
     setAccountType(type);
     setStep('form');
+    // Fetch categories when provider is selected
+    if (type === 'provider') {
+      fetchCategories();
+    }
+  };
+
+  const fetchCategories = async () => {
+    setIsLoadingCategories(true);
+    try {
+      const response = await fetch('http://elanis.runasp.net/api/Category/active', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        setCategories(result.data);
+      } else {
+        toast.error(result.message || 'Failed to load categories');
+        // Set empty array to show error message
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Failed to load categories. Please try again.');
+      setCategories([]);
+    } finally {
+      setIsLoadingCategories(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -46,7 +96,7 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
@@ -55,14 +105,75 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
     }
 
     if (accountType === 'provider') {
-      toast.success('Registration successful! Your profile is pending admin approval.');
-    } else {
-      toast.success('Registration successful! You can now login.');
+      if (!idDocument || certificates.length === 0 || !cv) {
+        toast.error('Please upload all required documents (ID, Certificate, and CV)');
+        return;
+      }
+      if (!formData.selectedCategory) {
+        toast.error('Please select a service category');
+        return;
+      }
     }
 
-    setTimeout(() => {
-      navigate('login');
-    }, 2000);
+    setIsLoading(true);
+
+    try {
+      const apiUrl = accountType === 'user'
+        ? 'http://elanis.runasp.net/api/Account/register-user'
+        : 'http://elanis.runasp.net/api/Account/register-service-provider';
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('Email', formData.email);
+      formDataToSend.append('PhoneNumber', formData.phone);
+      formDataToSend.append('Password', formData.password);
+      formDataToSend.append('ConfirmPassword', formData.confirmPassword);
+      formDataToSend.append('FirstName', formData.firstName);
+      formDataToSend.append('LastName', formData.lastName);
+      formDataToSend.append('Address', formData.address);
+      formDataToSend.append('DateOfBirth', formData.dob);
+
+      if (accountType === 'provider') {
+        formDataToSend.append('Bio', formData.bio);
+        formDataToSend.append('NationalId', formData.nationalId);
+        formDataToSend.append('Experience', formData.experience);
+        formDataToSend.append('HourlyRate', formData.hourlyRate);
+        
+        if (idDocument) formDataToSend.append('IdDocument', idDocument);
+        if (certificates[0]) formDataToSend.append('Certificate', certificates[0]);
+        if (cv) formDataToSend.append('CVPath', cv);
+        
+        // Send single category ID
+        formDataToSend.append('SelectedCategoryIds', formData.selectedCategory);
+      }
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        body: formDataToSend,
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Registration successful!');
+        
+        // Get userId from response
+        const userId = accountType === 'user' ? result.data.id : result.data.userId;
+        
+        // Navigate to OTP verification page
+        navigate('verify-otp', {
+          userId,
+          userRole: accountType,
+        });
+      } else {
+        const errorMessage = result.message || 'Registration failed. Please try again.';
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error('An error occurred. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (step === 'type') {
@@ -158,20 +269,37 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
             {/* Common Fields */}
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block mb-2 text-gray-700">Full Name *</label>
+                <label className="block mb-2 text-gray-700">First Name *</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
                     className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                    placeholder="John Doe"
+                    placeholder="John"
                     required
                   />
                 </div>
               </div>
 
+              <div>
+                <label className="block mb-2 text-gray-700">Last Name *</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    placeholder="Doe"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block mb-2 text-gray-700">Email Address *</label>
                 <div className="relative">
@@ -186,9 +314,7 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block mb-2 text-gray-700">Phone Number *</label>
                 <div className="relative">
@@ -203,7 +329,9 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                   />
                 </div>
               </div>
+            </div>
 
+            <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block mb-2 text-gray-700">Address *</label>
                 <div className="relative">
@@ -218,6 +346,20 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block mb-2 text-gray-700">Date of Birth *</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="date"
+                    value={formData.dob}
+                    onChange={(e) => handleInputChange('dob', e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Provider-specific Fields */}
@@ -225,29 +367,32 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
               <>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block mb-2 text-gray-700">Date of Birth *</label>
+                    <label className="block mb-2 text-gray-700">National ID *</label>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
-                        type="date"
-                        value={formData.dob}
-                        onChange={(e) => handleInputChange('dob', e.target.value)}
+                        type="text"
+                        value={formData.nationalId}
+                        onChange={(e) => handleInputChange('nationalId', e.target.value)}
                         className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                        placeholder="National ID Number"
                         required
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block mb-2 text-gray-700">ID Number *</label>
+                    <label className="block mb-2 text-gray-700">Hourly Rate ($/hr) *</label>
                     <div className="relative">
-                      <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
-                        type="text"
-                        value={formData.idNumber}
-                        onChange={(e) => handleInputChange('idNumber', e.target.value)}
+                        type="number"
+                        value={formData.hourlyRate}
+                        onChange={(e) => handleInputChange('hourlyRate', e.target.value)}
                         className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                        placeholder="ID123456789"
+                        placeholder="25"
+                        min="1"
+                        step="0.01"
                         required
                       />
                     </div>
@@ -255,16 +400,65 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                 </div>
 
                 <div>
-                  <label className="block mb-2 text-gray-700">Years of Experience *</label>
-                  <input
-                    type="number"
+                  <label className="block mb-2 text-gray-700">Experience Details *</label>
+                  <textarea
                     value={formData.experience}
                     onChange={(e) => handleInputChange('experience', e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                    placeholder="5"
-                    min="0"
+                    rows={3}
+                    placeholder="Describe your experience in detail (minimum 20 characters)..."
+                    minLength={20}
                     required
                   />
+                  <p className="text-sm text-gray-500 mt-1">
+                    {formData.experience.length}/20 characters minimum
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-gray-700">Service Category *</label>
+                  {isLoadingCategories ? (
+                    <div className="flex justify-center p-8 border-2 border-gray-200 rounded-lg">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFA726]"></div>
+                    </div>
+                  ) : categories.length === 0 ? (
+                    <div className="p-4 border-2 border-red-200 bg-red-50 rounded-lg text-center">
+                      <p className="text-red-600">Failed to load categories. Please refresh the page.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 p-4 border-2 border-gray-200 rounded-lg">
+                      {categories.map((category) => (
+                        <label key={category.id} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-3 rounded transition-colors">
+                          <input
+                            type="radio"
+                            name="category"
+                            value={category.id}
+                            checked={formData.selectedCategory === category.id}
+                            onChange={(e) => {
+                              setFormData(prev => ({
+                                ...prev,
+                                selectedCategory: e.target.value
+                              }));
+                            }}
+                            className="w-4 h-4 text-[#FFA726] border-gray-300 focus:ring-[#FFA726]"
+                            required
+                          />
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">{category.icon || '📋'}</span>
+                            <div>
+                              <span className="text-gray-900 font-medium">{category.name}</span>
+                              {category.description && (
+                                <p className="text-xs text-gray-500">{category.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {!isLoadingCategories && !formData.selectedCategory && (
+                    <p className="text-sm text-red-500 mt-1">Please select a service category</p>
+                  )}
                 </div>
 
                 <div>
@@ -280,30 +474,54 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                 </div>
 
                 <div>
-                  <label className="block mb-2 text-gray-700">Upload Certificates</label>
+                  <label className="block mb-2 text-gray-700">Upload ID Document *</label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#FFA726] transition-colors">
                     <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <label className="cursor-pointer">
                       <span className="text-[#FFA726] hover:underline">Click to upload</span>
-                      <span className="text-gray-600"> or drag and drop</span>
+                      <span className="text-gray-600"> ID document</span>
                       <input
                         type="file"
-                        multiple
                         accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => handleFileUpload('certificates', e.target.files)}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setIdDocument(e.target.files[0]);
+                            toast.success('ID document uploaded');
+                          }
+                        }}
                         className="hidden"
+                        required
                       />
                     </label>
-                    {certificates.length > 0 && (
-                      <p className="text-sm text-gray-600 mt-2">
-                        {certificates.length} file(s) selected
-                      </p>
+                    {idDocument && (
+                      <p className="text-sm text-gray-600 mt-2">{idDocument.name}</p>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block mb-2 text-gray-700">Upload CV/Resume</label>
+                  <label className="block mb-2 text-gray-700">Upload Certificate *</label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#FFA726] transition-colors">
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <label className="cursor-pointer">
+                      <span className="text-[#FFA726] hover:underline">Click to upload</span>
+                      <span className="text-gray-600"> certificate</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => handleFileUpload('certificates', e.target.files)}
+                        className="hidden"
+                        required
+                      />
+                    </label>
+                    {certificates.length > 0 && (
+                      <p className="text-sm text-gray-600 mt-2">{certificates[0].name}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-2 text-gray-700">Upload CV/Resume *</label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#FFA726] transition-colors">
                     <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <label className="cursor-pointer">
@@ -314,6 +532,7 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                         accept=".pdf,.doc,.docx"
                         onChange={(e) => handleFileUpload('cv', e.target.files)}
                         className="hidden"
+                        required
                       />
                     </label>
                     {cv && (
@@ -359,9 +578,16 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
 
             <button
               type="submit"
-              className="w-full py-4 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+              disabled={isLoading}
+              className={`w-full py-4 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors ${
+                isLoading ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
             >
-              {accountType === 'provider' ? 'Submit for Approval' : 'Create Account'}
+              {isLoading
+                ? 'Registering...'
+                : accountType === 'provider'
+                ? 'Submit for Approval'
+                : 'Create Account'}
             </button>
           </form>
 

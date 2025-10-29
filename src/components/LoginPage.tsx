@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Heart, Mail, Lock, ArrowLeft, Phone } from 'lucide-react';
 import { User } from '../App';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface LoginPageProps {
   navigate: (page: string) => void;
@@ -14,48 +14,16 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Mock users for demo
-  const mockUsers: Record<string, User> = {
-    'admin@carepro.com': {
-      id: '1',
-      name: 'Admin User',
-      email: 'admin@carepro.com',
-      role: 'admin',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
-    },
-    'user@test.com': {
-      id: '2',
-      name: 'John Doe',
-      email: 'user@test.com',
-      role: 'user',
-      phone: '+1 (555) 123-4567',
-      address: '123 Main St, City',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-    },
-    'provider@test.com': {
-      id: '3',
-      name: 'Sarah Johnson',
-      email: 'provider@test.com',
-      role: 'provider',
-      phone: '+1 (555) 987-6543',
-      address: '456 Oak Ave, City',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-      approved: true,
-    },
-    'pending@test.com': {
-      id: '4',
-      name: 'Mike Wilson',
-      email: 'pending@test.com',
-      role: 'provider',
-      phone: '+1 (555) 555-5555',
-      address: '789 Pine Rd, City',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
-      approved: false,
-    },
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation
+    if (!email || !password || !phoneNumber) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -71,27 +39,52 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
         }),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (response.ok) {
-        // Assuming the API returns user data on successful login
+      if (response.ok && result.succeeded) {
+        const apiData = result.data;
+        
+        // Save tokens and user data to localStorage
+        localStorage.setItem('accessToken', apiData.accessToken);
+        localStorage.setItem('refreshToken', apiData.refreshToken);
+        localStorage.setItem('userId', apiData.id);
+        localStorage.setItem('userEmail', apiData.email);
+        localStorage.setItem('userPhone', apiData.phoneNumber);
+        localStorage.setItem('userRole', apiData.role);
+        localStorage.setItem('isEmailConfirmed', apiData.isEmailConfirmed.toString());
+        
+        // Determine provider approval status
+        let providerStatus = 1; // Default: Pending
+        if (apiData.role.toLowerCase() === 'provider' || apiData.role.toLowerCase() === 'serviceprovider') {
+          // Status: 1=Pending, 2=UnderReview, 3=Approved, 4=Rejected, 5=RequiresMoreInfo
+          providerStatus = apiData.providerStatus || 1;
+          localStorage.setItem('providerStatus', providerStatus.toString());
+        }
+        
+        // Create user object
         const user: User = {
-          id: data.userId || '1',
-          name: data.name || email.split('@')[0],
-          email: email,
-          phone: phoneNumber,
-          role: data.role || 'user',
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email.split('@')[0]}`,
+          id: apiData.id,
+          name: email.split('@')[0], // Will be updated from profile later
+          email: apiData.email,
+          phone: apiData.phoneNumber,
+          role: apiData.role.toLowerCase() === 'serviceprovider' ? 'provider' : apiData.role.toLowerCase(),
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiData.email.split('@')[0]}`,
+          approved: providerStatus === 3, // Only approved if status = 3
+          providerStatus,
         };
         
-        toast.success(`Welcome back, ${user.name}!`);
+        // Save full user object
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        
+        toast.success(result.message || `Welcome back, ${user.name}!`);
         onLogin(user);
       } else {
-        toast.error(data.message || 'Login failed. Please check your credentials.');
+        const errorMessage = result.message || 'Login failed. Please check your credentials.';
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('An error occurred. Please try again.');
+      toast.error('An error occurred. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }

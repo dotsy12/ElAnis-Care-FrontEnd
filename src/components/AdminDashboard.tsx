@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User } from '../App';
 import {
   Home, Users, UserCheck, FolderOpen, DollarSign, CreditCard, LogOut,
   Check, X, Edit, Trash2, Plus, Search
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Textarea } from './ui/textarea';
@@ -26,16 +26,35 @@ interface AdminDashboardProps {
 
 interface PendingProvider {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
-  experience: number;
-  serviceType: string;
+  userId: string;
+  userEmail: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  address?: string;
+  dateOfBirth?: string;
   bio: string;
-  certificates: string[];
-  cv: string;
-  submittedDate: string;
-  avatar: string;
+  nationalId?: string;
+  experience: string;
+  hourlyRate: number;
+  idDocumentPath?: string;
+  certificatePath?: string;
+  selectedCategories?: string[];
+  status: number; // 1=Pending, 2=Approved, 3=Rejected
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedByName: string | null;
+  rejectionReason: string | null;
+}
+
+interface ProvidersResponse {
+  items: PendingProvider[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 interface RegisteredUser {
@@ -52,15 +71,34 @@ interface RegisteredUser {
 interface Category {
   id: string;
   name: string;
+  nameEn: string;
   description: string;
   icon: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
-interface PricingRule {
+interface ServicePricing {
   id: string;
-  shiftType: '3h' | '12h' | 'fullday';
-  baseRate: number;
+  categoryId: string;
+  categoryName: string;
+  shiftType: number; // 1=3Hours, 2=12Hours, 3=FullDay
+  shiftTypeName: string;
+  pricePerShift: number;
   description: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+interface CategoryWithPricing {
+  categoryId: string;
+  categoryName: string;
+  categoryDescription: string;
+  categoryIcon: string;
+  categoryIsActive: boolean;
+  pricing: ServicePricing[];
 }
 
 interface Booking {
@@ -73,37 +111,34 @@ interface Booking {
   status: string;
 }
 
+interface DashboardStats {
+  totalUsers: number;
+  totalServiceProviders: number;
+  pendingApplications: number;
+  totalServiceRequests: number;
+  completedServiceRequests: number;
+  totalReviews: number;
+  totalEarnings: number;
+  averageRating: number;
+}
+
 export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState('dashboard');
-  
-  const [pendingProviders, setPendingProviders] = useState<PendingProvider[]>([
-    {
-      id: 'p1',
-      name: 'Mike Wilson',
-      email: 'mike.wilson@email.com',
-      phone: '+1 (555) 111-2222',
-      experience: 5,
-      serviceType: 'Elderly Care',
-      bio: 'Dedicated caregiver with 5 years of experience in elderly care and companionship.',
-      certificates: ['CPR Certification', 'First Aid Certificate'],
-      cv: 'Mike_Wilson_CV.pdf',
-      submittedDate: '2025-10-20',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
-    },
-    {
-      id: 'p2',
-      name: 'Anna Martinez',
-      email: 'anna.m@email.com',
-      phone: '+1 (555) 333-4444',
-      experience: 3,
-      serviceType: 'Child Care',
-      bio: 'Certified nanny with early childhood education background.',
-      certificates: ['Child Care Certificate', 'CPR Certification'],
-      cv: 'Anna_Martinez_CV.pdf',
-      submittedDate: '2025-10-22',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna',
-    },
-  ]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    totalServiceProviders: 0,
+    pendingApplications: 0,
+    totalServiceRequests: 0,
+    completedServiceRequests: 0,
+    totalReviews: 0,
+    totalEarnings: 0,
+    averageRating: 0,
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [pendingProviders, setPendingProviders] = useState<PendingProvider[]>([]);
+  const [isLoadingProviders, setIsLoadingProviders] = useState(true);
+  const [providersPage, setProvidersPage] = useState(1);
+  const [providersTotalPages, setProvidersTotalPages] = useState(1);
 
   const [users, setUsers] = useState<RegisteredUser[]>([
     {
@@ -128,47 +163,21 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
     },
   ]);
 
-  const [categories, setCategories] = useState<Category[]>([
-    {
-      id: 'c1',
-      name: 'Elderly Care',
-      description: 'Compassionate care for seniors',
-      icon: '👴',
-    },
-    {
-      id: 'c2',
-      name: 'Child Care',
-      description: 'Professional childcare services',
-      icon: '👶',
-    },
-    {
-      id: 'c3',
-      name: 'Home Nursing',
-      description: 'Professional nursing at home',
-      icon: '🏥',
-    },
-  ]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
-  const [pricing, setPricing] = useState<PricingRule[]>([
-    {
-      id: 'pr1',
-      shiftType: '3h',
-      baseRate: 20,
-      description: 'Standard 3-hour shift',
-    },
-    {
-      id: 'pr2',
-      shiftType: '12h',
-      baseRate: 22,
-      description: 'Half-day 12-hour shift',
-    },
-    {
-      id: 'pr3',
-      shiftType: 'fullday',
-      baseRate: 25,
-      description: 'Full 24-hour day shift',
-    },
-  ]);
+  const [categoriesWithPricing, setCategoriesWithPricing] = useState<CategoryWithPricing[]>([]);
+  const [isLoadingPricing, setIsLoadingPricing] = useState(true);
+  const [showPricingDialog, setShowPricingDialog] = useState(false);
+  const [editingPricing, setEditingPricing] = useState<ServicePricing | null>(null);
+  const [pricingForm, setPricingForm] = useState({
+    categoryId: '',
+    shiftType: 1,
+    pricePerShift: 0,
+    description: '',
+    isActive: true,
+  });
+  const [isSavingPricing, setIsSavingPricing] = useState(false);
 
   const [bookings] = useState<Booking[]>([
     {
@@ -195,28 +204,137 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
   const [showProviderDialog, setShowProviderDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  
+  const [isLoadingProviderDetails, setIsLoadingProviderDetails] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [categoryForm, setCategoryForm] = useState({ name: '', description: '', icon: '' });
+  const [categoryForm, setCategoryForm] = useState({ name: '', nameEn: '', description: '', icon: '', isActive: true });
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
 
-  const handleApproveProvider = (providerId: string) => {
-    setPendingProviders(prev => prev.filter(p => p.id !== providerId));
-    toast.success('Provider approved successfully!');
-    setShowProviderDialog(false);
+  // Fetch provider details by ID
+  const fetchProviderDetails = async (providerId: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    setIsLoadingProviderDetails(true);
+    try {
+      const response = await fetch(
+        `http://elanis.runasp.net/api/Admin/service-provider-applications/${providerId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        setSelectedProvider(result.data);
+        setShowProviderDialog(true);
+      } else {
+        toast.error(result.message || 'Failed to fetch provider details');
+      }
+    } catch (error) {
+      console.error('Error fetching provider details:', error);
+      toast.error('Failed to load provider details');
+    } finally {
+      setIsLoadingProviderDetails(false);
+    }
   };
 
-  const handleRejectProvider = () => {
+  const handleApproveProvider = async (providerId: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const response = await fetch(
+        `http://elanis.runasp.net/api/Admin/service-provider-applications/${providerId}/approve`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Provider approved successfully!');
+        setPendingProviders(prev => prev.filter(p => p.id !== providerId));
+        setShowProviderDialog(false);
+        // Refresh stats
+        window.location.reload();
+      } else {
+        toast.error(result.message || 'Failed to approve provider');
+      }
+    } catch (error) {
+      console.error('Error approving provider:', error);
+      toast.error('Failed to approve provider');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRejectProvider = async () => {
     if (!selectedProvider || !rejectionReason.trim()) {
       toast.error('Please provide a rejection reason');
       return;
     }
-    
-    setPendingProviders(prev => prev.filter(p => p.id !== selectedProvider.id));
-    toast.success('Provider application rejected');
-    setShowRejectDialog(false);
-    setShowProviderDialog(false);
-    setRejectionReason('');
+
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const response = await fetch(
+        `http://elanis.runasp.net/api/Admin/service-provider-applications/${selectedProvider.id}/reject`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            rejectionReason: rejectionReason.trim(),
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Provider application rejected');
+        setPendingProviders(prev => prev.filter(p => p.id !== selectedProvider.id));
+        setShowRejectDialog(false);
+        setShowProviderDialog(false);
+        setRejectionReason('');
+        // Refresh stats
+        window.location.reload();
+      } else {
+        toast.error(result.message || 'Failed to reject provider');
+      }
+    } catch (error) {
+      console.error('Error rejecting provider:', error);
+      toast.error('Failed to reject provider');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleSuspendUser = (userId: string) => {
@@ -235,34 +353,367 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
     toast.success('User deleted');
   };
 
-  const handleSaveCategory = () => {
+  // Fetch all categories
+  const fetchCategories = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      setIsLoadingCategories(false);
+      return;
+    }
+
+    try {
+      setIsLoadingCategories(true);
+      const response = await fetch('http://elanis.runasp.net/api/Category', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        setCategories(result.data);
+      } else {
+        toast.error(result.message || 'Failed to fetch categories');
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Failed to load categories');
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
+  const handleSaveCategory = async () => {
     if (!categoryForm.name.trim() || !categoryForm.description.trim()) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    if (editingCategory) {
-      setCategories(prev =>
-        prev.map(c => (c.id === editingCategory.id ? { ...c, ...categoryForm } : c))
-      );
-      toast.success('Category updated');
-    } else {
-      setCategories(prev => [
-        ...prev,
-        { id: `c${Date.now()}`, ...categoryForm },
-      ]);
-      toast.success('Category added');
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
     }
 
-    setShowCategoryDialog(false);
-    setEditingCategory(null);
-    setCategoryForm({ name: '', description: '', icon: '' });
+    setIsSavingCategory(true);
+
+    try {
+      const url = editingCategory
+        ? `http://elanis.runasp.net/api/Category/${editingCategory.id}`
+        : 'http://elanis.runasp.net/api/Category';
+
+      const method = editingCategory ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: categoryForm.name.trim(),
+          nameEn: categoryForm.nameEn.trim(),
+          description: categoryForm.description.trim(),
+          icon: categoryForm.icon.trim(),
+          isActive: categoryForm.isActive,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || (editingCategory ? 'Category updated successfully' : 'Category created successfully'));
+        setShowCategoryDialog(false);
+        setEditingCategory(null);
+        setCategoryForm({ name: '', nameEn: '', description: '', icon: '', isActive: true });
+        // Refresh categories list
+        fetchCategories();
+      } else {
+        toast.error(result.message || 'Failed to save category');
+      }
+    } catch (error) {
+      console.error('Error saving category:', error);
+      toast.error('Failed to save category');
+    } finally {
+      setIsSavingCategory(false);
+    }
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
-    setCategories(prev => prev.filter(c => c.id !== categoryId));
-    toast.success('Category deleted');
+  const handleDeleteCategory = async (categoryId: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this category?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://elanis.runasp.net/api/Category/${categoryId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Category deleted successfully');
+        // Refresh categories list
+        fetchCategories();
+      } else {
+        toast.error(result.message || 'Failed to delete category');
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      toast.error('Failed to delete category');
+    }
   };
+
+  // Fetch categories with pricing
+  const fetchCategoriesWithPricing = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      setIsLoadingPricing(false);
+      return;
+    }
+
+    try {
+      setIsLoadingPricing(true);
+      const response = await fetch('http://elanis.runasp.net/api/ServicePricing/categories-with-pricing', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        setCategoriesWithPricing(result.data);
+      } else {
+        toast.error(result.message || 'Failed to fetch pricing');
+      }
+    } catch (error) {
+      console.error('Error fetching pricing:', error);
+      toast.error('Failed to load pricing');
+    } finally {
+      setIsLoadingPricing(false);
+    }
+  };
+
+  const handleSavePricing = async () => {
+    if (!pricingForm.categoryId || pricingForm.pricePerShift <= 0) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    setIsSavingPricing(true);
+
+    try {
+      const url = editingPricing
+        ? `http://elanis.runasp.net/api/ServicePricing/${editingPricing.id}`
+        : 'http://elanis.runasp.net/api/ServicePricing';
+
+      const method = editingPricing ? 'PUT' : 'POST';
+
+      const body = editingPricing
+        ? {
+            pricePerShift: pricingForm.pricePerShift,
+            description: pricingForm.description.trim(),
+            isActive: pricingForm.isActive,
+          }
+        : {
+            categoryId: pricingForm.categoryId,
+            shiftType: pricingForm.shiftType,
+            pricePerShift: pricingForm.pricePerShift,
+            description: pricingForm.description.trim(),
+            isActive: pricingForm.isActive,
+          };
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || (editingPricing ? 'Pricing updated successfully' : 'Pricing created successfully'));
+        setShowPricingDialog(false);
+        setEditingPricing(null);
+        setPricingForm({
+          categoryId: '',
+          shiftType: 1,
+          pricePerShift: 0,
+          description: '',
+          isActive: true,
+        });
+        fetchCategoriesWithPricing();
+      } else {
+        toast.error(result.message || 'Failed to save pricing');
+      }
+    } catch (error) {
+      console.error('Error saving pricing:', error);
+      toast.error('Failed to save pricing');
+    } finally {
+      setIsSavingPricing(false);
+    }
+  };
+
+  const handleDeletePricing = async (pricingId: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this pricing?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://elanis.runasp.net/api/ServicePricing/${pricingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Pricing deleted successfully');
+        fetchCategoriesWithPricing();
+      } else {
+        toast.error(result.message || 'Failed to delete pricing');
+      }
+    } catch (error) {
+      console.error('Error deleting pricing:', error);
+      toast.error('Failed to delete pricing');
+    }
+  };
+
+  const getShiftTypeName = (shiftType: number): string => {
+    switch (shiftType) {
+      case 1: return '3 Hours';
+      case 2: return '12 Hours';
+      case 3: return 'Full Day';
+      default: return 'Unknown';
+    }
+  };
+
+  // Fetch dashboard stats from API
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      const accessToken = localStorage.getItem('accessToken');
+      
+      if (!accessToken) {
+        toast.error('Authentication token not found');
+        setIsLoadingStats(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('http://elanis.runasp.net/api/Admin/dashboard-stats', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.succeeded) {
+          setDashboardStats(result.data);
+        } else {
+          toast.error(result.message || 'Failed to fetch dashboard stats');
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        toast.error('Failed to load dashboard statistics');
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
+
+  // Fetch pending provider applications
+  useEffect(() => {
+    const fetchPendingProviders = async () => {
+      const accessToken = localStorage.getItem('accessToken');
+      
+      if (!accessToken) {
+        setIsLoadingProviders(false);
+        return;
+      }
+
+      try {
+        setIsLoadingProviders(true);
+        const response = await fetch(
+          `http://elanis.runasp.net/api/Admin/service-provider-applications?page=${providersPage}&pageSize=10`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok && result.succeeded) {
+          const data: ProvidersResponse = result.data;
+          // Filter only pending applications (status = 1)
+          const pending = data.items.filter(item => item.status === 1);
+          setPendingProviders(pending);
+          setProvidersTotalPages(data.totalPages);
+        } else {
+          toast.error(result.message || 'Failed to fetch provider applications');
+        }
+      } catch (error) {
+        console.error('Error fetching provider applications:', error);
+        toast.error('Failed to load provider applications');
+      } finally {
+        setIsLoadingProviders(false);
+      }
+    };
+
+    fetchPendingProviders();
+  }, [providersPage]);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  // Fetch pricing on mount
+  useEffect(() => {
+    fetchCategoriesWithPricing();
+  }, []);
 
   const totalRevenue = bookings.reduce((sum, b) => sum + b.amount, 0);
 
@@ -366,58 +817,118 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
           <div className="md:col-span-3">
             {activeTab === 'dashboard' && (
               <div className="space-y-6">
-                <div className="grid md:grid-cols-4 gap-6">
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Users className="w-6 h-6 text-blue-600" />
+                {isLoadingStats ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid md:grid-cols-4 gap-6">
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <Users className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Total Users</p>
+                            <p className="text-2xl text-gray-900">{dashboardStats.totalUsers}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Total Users</p>
-                        <p className="text-2xl text-gray-900">{users.filter(u => u.role === 'user').length}</p>
+
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <UserCheck className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Providers</p>
+                            <p className="text-2xl text-gray-900">{dashboardStats.totalServiceProviders}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                            <UserCheck className="w-6 h-6 text-orange-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Pending</p>
+                            <p className="text-2xl text-gray-900">{dashboardStats.pendingApplications}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                            <DollarSign className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Revenue</p>
+                            <p className="text-2xl text-gray-900">${dashboardStats.totalEarnings.toFixed(2)}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <UserCheck className="w-6 h-6 text-green-600" />
+                    {/* Additional Stats Row */}
+                    <div className="grid md:grid-cols-4 gap-6">
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <FolderOpen className="w-6 h-6 text-indigo-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Total Requests</p>
+                            <p className="text-2xl text-gray-900">{dashboardStats.totalServiceRequests}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Providers</p>
-                        <p className="text-2xl text-gray-900">{users.filter(u => u.role === 'provider').length}</p>
+
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <Check className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Completed</p>
+                            <p className="text-2xl text-gray-900">{dashboardStats.completedServiceRequests}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                            <span className="text-xl">⭐</span>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Total Reviews</p>
+                            <p className="text-2xl text-gray-900">{dashboardStats.totalReviews}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-md p-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
+                            <span className="text-xl">📊</span>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Avg Rating</p>
+                            <p className="text-2xl text-gray-900">{dashboardStats.averageRating.toFixed(1)}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </>
+                )}
 
+                {!isLoadingStats && (
                   <div className="bg-white rounded-xl shadow-md p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                        <UserCheck className="w-6 h-6 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Pending</p>
-                        <p className="text-2xl text-gray-900">{pendingProviders.length}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <DollarSign className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Revenue</p>
-                        <p className="text-2xl text-gray-900">${totalRevenue}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-4 text-gray-900">Recent Bookings</h3>
+                    <h3 className="mb-4 text-gray-900">Recent Bookings</h3>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -445,39 +956,45 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
                     </TableBody>
                   </Table>
                 </div>
+                )}
 
-                {pendingProviders.length > 0 && (
+                {!isLoadingStats && !isLoadingProviders && pendingProviders.length > 0 && (
                   <div className="bg-white rounded-xl shadow-md p-6">
-                    <h3 className="mb-4 text-gray-900">Pending Provider Approvals</h3>
-                    <div className="space-y-3">
-                      {pendingProviders.map(provider => (
-                        <div
-                          key={provider.id}
-                          className="flex items-center justify-between p-4 border-2 border-orange-200 bg-orange-50 rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <ImageWithFallback
-                              src={provider.avatar}
-                              alt={provider.name}
-                              className="w-12 h-12 rounded-full"
-                            />
-                            <div>
-                              <p className="text-gray-900">{provider.name}</p>
-                              <p className="text-sm text-gray-600">{provider.serviceType}</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setSelectedProvider(provider);
-                              setShowProviderDialog(true);
-                            }}
-                            className="px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+                    <h3 className="mb-4 text-gray-900">Pending Provider Approvals ({pendingProviders.length})</h3>
+                    {isLoadingProviders ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFA726]"></div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {pendingProviders.map(provider => (
+                          <div
+                            key={provider.id}
+                            className="flex items-center justify-between p-4 border-2 border-orange-200 bg-orange-50 rounded-lg"
                           >
-                            Review
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                            <div className="flex items-center gap-3">
+                              <ImageWithFallback
+                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${provider.firstName}`}
+                                alt={`${provider.firstName} ${provider.lastName}`}
+                                className="w-12 h-12 rounded-full"
+                              />
+                              <div>
+                                <p className="text-gray-900 font-medium">{provider.firstName} {provider.lastName}</p>
+                                <p className="text-sm text-gray-600">{provider.userEmail}</p>
+                                <p className="text-xs text-gray-500">${provider.hourlyRate}/hr</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => fetchProviderDetails(provider.id)}
+                              disabled={isLoadingProviderDetails}
+                              className="px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50"
+                            >
+                              {isLoadingProviderDetails ? 'Loading...' : 'Review'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -562,42 +1079,47 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
 
             {activeTab === 'providers' && (
               <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="mb-6 text-gray-900">Provider Applications</h3>
-                <div className="space-y-4">
-                  {pendingProviders.map(provider => (
-                    <div key={provider.id} className="border-2 border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start gap-4">
-                        <ImageWithFallback
-                          src={provider.avatar}
-                          alt={provider.name}
-                          className="w-16 h-16 rounded-full"
-                        />
-                        <div className="flex-1">
-                          <h4 className="text-gray-900">{provider.name}</h4>
-                          <p className="text-sm text-gray-600 mb-2">{provider.serviceType}</p>
-                          <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                            <p className="text-gray-600">📧 {provider.email}</p>
-                            <p className="text-gray-600">📞 {provider.phone}</p>
-                            <p className="text-gray-600">📅 Submitted: {provider.submittedDate}</p>
-                            <p className="text-gray-600">⏱️ Experience: {provider.experience} years</p>
+                <h3 className="mb-6 text-gray-900">Provider Applications ({pendingProviders.length})</h3>
+                {isLoadingProviders ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingProviders.map(provider => (
+                      <div key={provider.id} className="border-2 border-gray-200 rounded-lg p-4">
+                        <div className="flex items-start gap-4">
+                          <ImageWithFallback
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${provider.firstName}`}
+                            alt={`${provider.firstName} ${provider.lastName}`}
+                            className="w-16 h-16 rounded-full"
+                          />
+                          <div className="flex-1">
+                            <h4 className="text-gray-900 font-medium">{provider.firstName} {provider.lastName}</h4>
+                            <p className="text-sm text-gray-600 mb-2">${provider.hourlyRate}/hr</p>
+                            <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                              <p className="text-gray-600">📧 {provider.userEmail}</p>
+                              <p className="text-gray-600">📞 {provider.phoneNumber}</p>
+                              <p className="text-gray-600">📅 Created: {new Date(provider.createdAt).toLocaleDateString()}</p>
+                              <p className="text-gray-600">⏱️ Experience: {provider.experience}</p>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{provider.bio}</p>
+                            <button
+                              onClick={() => fetchProviderDetails(provider.id)}
+                              disabled={isLoadingProviderDetails}
+                              className="px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isLoadingProviderDetails ? 'Loading...' : 'View Details'}
+                            </button>
                           </div>
-                          <button
-                            onClick={() => {
-                              setSelectedProvider(provider);
-                              setShowProviderDialog(true);
-                            }}
-                            className="px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-                          >
-                            View Details
-                          </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  {pendingProviders.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">No pending applications</p>
-                  )}
-                </div>
+                    ))}
+                    {pendingProviders.length === 0 && (
+                      <p className="text-center text-gray-500 py-8">No pending applications</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -608,7 +1130,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
                   <button
                     onClick={() => {
                       setEditingCategory(null);
-                      setCategoryForm({ name: '', description: '', icon: '' });
+                      setCategoryForm({ name: '', nameEn: '', description: '', icon: '', isActive: true });
                       setShowCategoryDialog(true);
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
@@ -618,25 +1140,39 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
                   </button>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  {categories.map(category => (
-                    <div key={category.id} className="border-2 border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="text-3xl">{category.icon}</div>
-                          <div>
-                            <h4 className="text-gray-900">{category.name}</h4>
-                            <p className="text-sm text-gray-600">{category.description}</p>
+                {isLoadingCategories ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+                  </div>
+                ) : categories.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">No categories found. Create your first category!</p>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {categories.map(category => (
+                      <div key={category.id} className="border-2 border-gray-200 rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="text-3xl">{category.icon}</div>
+                            <div className="flex-1">
+                              <h4 className="text-gray-900 font-medium">{category.name}</h4>
+                              <p className="text-sm text-gray-600">{category.description}</p>
+                              <Badge variant={category.isActive ? "default" : "destructive"} className="mt-1">
+                                {category.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
                           </div>
-                        </div>
                         <div className="flex gap-2">
                           <button
                             onClick={() => {
                               setEditingCategory(category);
                               setCategoryForm({
                                 name: category.name,
+                                nameEn: category.nameEn,
                                 description: category.description,
                                 icon: category.icon,
+                                isActive: category.isActive,
                               });
                               setShowCategoryDialog(true);
                             }}
@@ -654,36 +1190,108 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'pricing' && (
               <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="mb-6 text-gray-900">Shift Pricing</h3>
-                <div className="space-y-4">
-                  {pricing.map(rule => (
-                    <div key={rule.id} className="border-2 border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h4 className="text-gray-900">
-                            {rule.shiftType === '3h' ? '3 Hours' : rule.shiftType === '12h' ? '12 Hours' : 'Full Day'}
-                          </h4>
-                          <p className="text-sm text-gray-600">{rule.description}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="text-sm text-gray-600">Base Rate</p>
-                            <p className="text-2xl text-gray-900">${rule.baseRate}/hr</p>
-                          </div>
-                          <button className="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-gray-900">Service Pricing</h3>
+                  <button
+                    onClick={() => {
+                      setEditingPricing(null);
+                      setPricingForm({
+                        categoryId: '',
+                        shiftType: 1,
+                        pricePerShift: 0,
+                        description: '',
+                        isActive: true,
+                      });
+                      setShowPricingDialog(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Pricing
+                  </button>
                 </div>
+
+                {isLoadingPricing ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+                  </div>
+                ) : categoriesWithPricing.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">No pricing found. Create your first pricing!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {categoriesWithPricing.map(categoryData => (
+                      <div key={categoryData.categoryId} className="border-2 border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-3 mb-4 pb-4 border-b">
+                          <div className="text-3xl">{categoryData.categoryIcon}</div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">{categoryData.categoryName}</h4>
+                            <p className="text-sm text-gray-600">{categoryData.categoryDescription}</p>
+                          </div>
+                          <Badge variant={categoryData.categoryIsActive ? "default" : "destructive"}>
+                            {categoryData.categoryIsActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+
+                        {categoryData.pricing.length === 0 ? (
+                          <p className="text-gray-500 text-sm text-center py-4">No pricing configured</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {categoryData.pricing.map(price => (
+                              <div key={price.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="flex-1">
+                                  <h5 className="font-medium text-gray-900">{getShiftTypeName(price.shiftType)}</h5>
+                                  <p className="text-sm text-gray-600">{price.description}</p>
+                                  <Badge variant={price.isActive ? "default" : "destructive"} className="mt-1">
+                                    {price.isActive ? "Active" : "Inactive"}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                    <p className="text-sm text-gray-600">Price Per Shift</p>
+                                    <p className="text-2xl font-bold text-[#FFA726]">${price.pricePerShift}</p>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setEditingPricing(price);
+                                        setPricingForm({
+                                          categoryId: price.categoryId,
+                                          shiftType: price.shiftType,
+                                          pricePerShift: price.pricePerShift,
+                                          description: price.description,
+                                          isActive: price.isActive,
+                                        });
+                                        setShowPricingDialog(true);
+                                      }}
+                                      className="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeletePricing(price.id)}
+                                      className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -729,68 +1337,79 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
 
       {/* Provider Details Dialog */}
       <Dialog open={showProviderDialog} onOpenChange={setShowProviderDialog}>
-        <DialogContent className="max-w-2xl">
-          {selectedProvider && (
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          {isLoadingProviderDetails ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+            </div>
+          ) : selectedProvider && (
             <>
               <DialogHeader>
                 <DialogTitle>Provider Application Details</DialogTitle>
                 <DialogDescription>Review provider credentials and documents</DialogDescription>
               </DialogHeader>
               <div className="space-y-6">
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
                   <ImageWithFallback
-                    src={selectedProvider.avatar}
-                    alt={selectedProvider.name}
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedProvider.firstName}`}
+                    alt={`${selectedProvider.firstName} ${selectedProvider.lastName}`}
                     className="w-20 h-20 rounded-full"
                   />
                   <div className="flex-1">
-                    <h3 className="text-gray-900">{selectedProvider.name}</h3>
-                    <p className="text-gray-600">{selectedProvider.serviceType}</p>
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      {selectedProvider.firstName} {selectedProvider.lastName}
+                    </h3>
+                    <p className="text-lg text-[#FFA726] font-medium">${selectedProvider.hourlyRate}/hr</p>
                     <div className="mt-2 space-y-1 text-sm">
-                      <p className="text-gray-600">📧 {selectedProvider.email}</p>
-                      <p className="text-gray-600">📞 {selectedProvider.phone}</p>
-                      <p className="text-gray-600">⏱️ {selectedProvider.experience} years experience</p>
+                      <p className="text-gray-600">📧 {selectedProvider.userEmail}</p>
+                      <p className="text-gray-600">📞 {selectedProvider.phoneNumber}</p>
+                      <p className="text-gray-600">📅 Applied: {new Date(selectedProvider.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="mb-2 text-gray-900">Bio</h4>
-                  <p className="text-gray-600">{selectedProvider.bio}</p>
+                  <h4 className="font-semibold text-gray-900 mb-2">Professional Bio</h4>
+                  <p className="text-gray-600 text-sm bg-white p-4 rounded-lg border">{selectedProvider.bio}</p>
                 </div>
 
                 <div>
-                  <h4 className="mb-2 text-gray-900">Certificates</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">Experience</h4>
+                  <p className="text-gray-600 text-sm bg-white p-4 rounded-lg border">{selectedProvider.experience}</p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Documents</h4>
                   <div className="space-y-2">
-                    {selectedProvider.certificates.map((cert, i) => (
-                      <div key={i} className="p-2 bg-gray-50 rounded">
-                        <p className="text-sm text-gray-700">📄 {cert}</p>
+                    {selectedProvider.idDocumentPath && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-gray-700">📄 ID Document: {selectedProvider.idDocumentPath}</p>
                       </div>
-                    ))}
+                    )}
+                    {selectedProvider.certificatePath && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-gray-700">🎓 Certificate: {selectedProvider.certificatePath}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="mb-2 text-gray-900">CV/Resume</h4>
-                  <div className="p-2 bg-gray-50 rounded">
-                    <p className="text-sm text-gray-700">📎 {selectedProvider.cv}</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-4 border-t">
                   <button
                     onClick={() => handleApproveProvider(selectedProvider.id)}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    disabled={isProcessing}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Check className="w-5 h-5" />
-                    Approve
+                    {isProcessing ? 'Processing...' : 'Approve'}
                   </button>
                   <button
                     onClick={() => setShowRejectDialog(true)}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    disabled={isProcessing}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <X className="w-5 h-5" />
-                    Reject
+                    {isProcessing ? 'Processing...' : 'Reject'}
                   </button>
                 </div>
               </div>
@@ -823,15 +1442,17 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
                   setShowRejectDialog(false);
                   setRejectionReason('');
                 }}
-                className="px-4 py-2 border-2 border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                disabled={isProcessing}
+                className="px-4 py-2 border-2 border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRejectProvider}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                disabled={isProcessing}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Confirm Rejection
+                {isProcessing ? 'Processing...' : 'Confirm Rejection'}
               </button>
             </div>
           </div>
@@ -848,18 +1469,31 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="block mb-2 text-gray-700">Category Name</label>
-              <input
-                type="text"
-                value={categoryForm.name}
-                onChange={(e) => setCategoryForm(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                placeholder="e.g., Elderly Care"
-              />
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2 text-gray-700">Category Name (Arabic) *</label>
+                <input
+                  type="text"
+                  value={categoryForm.name}
+                  onChange={(e) => setCategoryForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                  placeholder="e.g., رعاية المسنين"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block mb-2 text-gray-700">Category Name (English)</label>
+                <input
+                  type="text"
+                  value={categoryForm.nameEn}
+                  onChange={(e) => setCategoryForm(prev => ({ ...prev, nameEn: e.target.value }))}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                  placeholder="e.g., Elderly Care"
+                />
+              </div>
             </div>
             <div>
-              <label className="block mb-2 text-gray-700">Description</label>
+              <label className="block mb-2 text-gray-700">Description *</label>
               <Textarea
                 value={categoryForm.description}
                 onChange={(e) => setCategoryForm(prev => ({ ...prev, description: e.target.value }))}
@@ -878,11 +1512,23 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
                 placeholder="e.g., 👴"
               />
             </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={categoryForm.isActive}
+                onChange={(e) => setCategoryForm(prev => ({ ...prev, isActive: e.target.checked }))}
+                className="w-4 h-4 text-[#FFA726] border-gray-300 rounded focus:ring-[#FFA726]"
+              />
+              <label htmlFor="isActive" className="text-gray-700 cursor-pointer">
+                Active Category (visible to providers during registration)
+              </label>
+            </div>
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => {
                   setShowCategoryDialog(false);
-                  setCategoryForm({ name: '', description: '', icon: '' });
+                  setCategoryForm({ name: '', nameEn: '', description: '', icon: '', isActive: true });
                 }}
                 className="px-4 py-2 border-2 border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
               >
@@ -890,9 +1536,121 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
               </button>
               <button
                 onClick={handleSaveCategory}
-                className="px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+                disabled={isSavingCategory}
+                className="px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingCategory ? 'Update' : 'Add'} Category
+                {isSavingCategory ? 'Saving...' : (editingCategory ? 'Update' : 'Add')} Category
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pricing Dialog */}
+      <Dialog open={showPricingDialog} onOpenChange={setShowPricingDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingPricing ? 'Edit Pricing' : 'Add Pricing'}</DialogTitle>
+            <DialogDescription>
+              {editingPricing ? 'Update the pricing details' : 'Create a new pricing for a category'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {!editingPricing && (
+              <div>
+                <label className="block mb-2 text-gray-700">Category *</label>
+                <select
+                  value={pricingForm.categoryId}
+                  onChange={(e) => setPricingForm(prev => ({ ...prev, categoryId: e.target.value }))}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                  required
+                >
+                  <option value="">Select Category</option>
+                  {categories.filter(c => c.isActive).map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {!editingPricing && (
+              <div>
+                <label className="block mb-2 text-gray-700">Shift Type *</label>
+                <select
+                  value={pricingForm.shiftType}
+                  onChange={(e) => setPricingForm(prev => ({ ...prev, shiftType: parseInt(e.target.value) }))}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                  required
+                >
+                  <option value={1}>3 Hours</option>
+                  <option value={2}>12 Hours</option>
+                  <option value={3}>Full Day (24 Hours)</option>
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className="block mb-2 text-gray-700">Price Per Shift ($) *</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={pricingForm.pricePerShift}
+                onChange={(e) => setPricingForm(prev => ({ ...prev, pricePerShift: parseFloat(e.target.value) || 0 }))}
+                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                placeholder="e.g., 20.00"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block mb-2 text-gray-700">Description</label>
+              <Textarea
+                value={pricingForm.description}
+                onChange={(e) => setPricingForm(prev => ({ ...prev, description: e.target.value }))}
+                className="focus:border-[#FFA726]"
+                placeholder="Brief description of this pricing..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="pricingIsActive"
+                checked={pricingForm.isActive}
+                onChange={(e) => setPricingForm(prev => ({ ...prev, isActive: e.target.checked }))}
+                className="w-4 h-4 text-[#FFA726] border-gray-300 rounded focus:ring-[#FFA726]"
+              />
+              <label htmlFor="pricingIsActive" className="text-gray-700 cursor-pointer">
+                Active Pricing (available for booking)
+              </label>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowPricingDialog(false);
+                  setPricingForm({
+                    categoryId: '',
+                    shiftType: 1,
+                    pricePerShift: 0,
+                    description: '',
+                    isActive: true,
+                  });
+                }}
+                className="px-4 py-2 border-2 border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePricing}
+                disabled={isSavingPricing}
+                className="px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingPricing ? 'Saving...' : (editingPricing ? 'Update' : 'Add')} Pricing
               </button>
             </div>
           </div>
