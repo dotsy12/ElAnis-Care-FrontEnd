@@ -27,7 +27,7 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://elanis.runasp.net/api/Account/login', {
+      const response = await fetch('https://elanis.runasp.net/api/Account/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +180,7 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
 
           <div className="mt-8 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600 mb-2">API Endpoint:</p>
-            <p className="text-sm text-gray-700 break-all">http://elanis.runasp.net/api/Account/login</p>
+            <p className="text-sm text-gray-700 break-all">https://elanis.runasp.net/api/Account/login</p>
           </div>
         </div>
       </div>

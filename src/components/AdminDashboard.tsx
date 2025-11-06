@@ -223,7 +223,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
     setIsLoadingProviderDetails(true);
     try {
       const response = await fetch(
-        `http://elanis.runasp.net/api/Admin/service-provider-applications/${providerId}`,
+        `https://elanis.runasp.net/api/Admin/service-provider-applications/${providerId}`,
         {
           method: 'GET',
           headers: {
@@ -259,7 +259,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
     setIsProcessing(true);
     try {
       const response = await fetch(
-        `http://elanis.runasp.net/api/Admin/service-provider-applications/${providerId}/approve`,
+        `https://elanis.runasp.net/api/Admin/service-provider-applications/${providerId}/approve`,
         {
           method: 'POST',
           headers: {
@@ -303,7 +303,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
     setIsProcessing(true);
     try {
       const response = await fetch(
-        `http://elanis.runasp.net/api/Admin/service-provider-applications/${selectedProvider.id}/reject`,
+        `https://elanis.runasp.net/api/Admin/service-provider-applications/${selectedProvider.id}/reject`,
         {
           method: 'POST',
           headers: {
@@ -363,7 +363,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
 
     try {
       setIsLoadingCategories(true);
-      const response = await fetch('http://elanis.runasp.net/api/Category', {
+      const response = await fetch('https://elanis.runasp.net/api/Category', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -402,8 +402,8 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
 
     try {
       const url = editingCategory
-        ? `http://elanis.runasp.net/api/Category/${editingCategory.id}`
-        : 'http://elanis.runasp.net/api/Category';
+        ? `https://elanis.runasp.net/api/Category/${editingCategory.id}`
+        : 'https://elanis.runasp.net/api/Category';
 
       const method = editingCategory ? 'PUT' : 'POST';
 
@@ -454,7 +454,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
     }
 
     try {
-      const response = await fetch(`http://elanis.runasp.net/api/Category/${categoryId}`, {
+      const response = await fetch(`https://elanis.runasp.net/api/Category/${categoryId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -487,7 +487,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
 
     try {
       setIsLoadingPricing(true);
-      const response = await fetch('http://elanis.runasp.net/api/ServicePricing/categories-with-pricing', {
+      const response = await fetch('https://elanis.runasp.net/api/ServicePricing/categories-with-pricing', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -526,8 +526,8 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
 
     try {
       const url = editingPricing
-        ? `http://elanis.runasp.net/api/ServicePricing/${editingPricing.id}`
-        : 'http://elanis.runasp.net/api/ServicePricing';
+        ? `https://elanis.runasp.net/api/ServicePricing/${editingPricing.id}`
+        : 'https://elanis.runasp.net/api/ServicePricing';
 
       const method = editingPricing ? 'PUT' : 'POST';
 
@@ -591,7 +591,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
     }
 
     try {
-      const response = await fetch(`http://elanis.runasp.net/api/ServicePricing/${pricingId}`, {
+      const response = await fetch(`https://elanis.runasp.net/api/ServicePricing/${pricingId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -634,7 +634,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
       }
 
       try {
-        const response = await fetch('http://elanis.runasp.net/api/Admin/dashboard-stats', {
+        const response = await fetch('https://elanis.runasp.net/api/Admin/dashboard-stats', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -673,7 +673,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
       try {
         setIsLoadingProviders(true);
         const response = await fetch(
-          `http://elanis.runasp.net/api/Admin/service-provider-applications?page=${providersPage}&pageSize=10`,
+          `https://elanis.runasp.net/api/Admin/service-provider-applications?page=${providersPage}&pageSize=10`,
           {
             method: 'GET',
             headers: {

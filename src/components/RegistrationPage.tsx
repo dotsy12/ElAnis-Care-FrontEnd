@@ -55,7 +55,7 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
   const fetchCategories = async () => {
     setIsLoadingCategories(true);
     try {
-      const response = await fetch('http://elanis.runasp.net/api/Category/active', {
+      const response = await fetch('https://elanis.runasp.net/api/Category/active', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -119,8 +119,8 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
 
     try {
       const apiUrl = accountType === 'user'
-        ? 'http://elanis.runasp.net/api/Account/register-user'
-        : 'http://elanis.runasp.net/api/Account/register-service-provider';
+        ? 'https://elanis.runasp.net/api/Account/register-user'
+        : 'https://elanis.runasp.net/api/Account/register-service-provider';
 
       const formDataToSend = new FormData();
       formDataToSend.append('Email', formData.email);

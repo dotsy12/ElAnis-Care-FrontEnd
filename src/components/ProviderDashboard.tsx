@@ -91,12 +91,24 @@ interface ProviderDashboardData {
   workingAreas: string[];
 }
 
+interface ProviderAvailability {
+  id: string;
+  date: string;
+  isAvailable: boolean;
+  availableShift: number; // 1=3 Hours, 2=12 Hours, 3=24 Hours
+  notes: string;
+}
+
 export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboardProps) {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedDates, setSelectedDates] = useState<Date[]>([new Date()]);
-  const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>(['Morning']);
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<number[]>([1]); // Changed to numbers
   const [workAreas, setWorkAreas] = useState<WorkingArea[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
+  const [availabilities, setAvailabilities] = useState<ProviderAvailability[]>([]);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+  const [isSavingAvailability, setIsSavingAvailability] = useState(false);
+  const [availabilityNotes, setAvailabilityNotes] = useState('');
   const [newArea, setNewArea] = useState({
     governorate: '',
     city: '',
@@ -106,6 +118,10 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
   // Dashboard Data from API
   const [dashboardData, setDashboardData] = useState<ProviderDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Provider Requests
+  const [providerRequests, setProviderRequests] = useState<ServiceRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   
   // Profile Data
   const [profileData, setProfileData] = useState<ProviderProfile | null>(null);
@@ -122,7 +138,12 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
   const [selectedRequestForReject, setSelectedRequestForReject] = useState<ServiceRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  const timeSlots = ['Morning', 'Afternoon', 'Evening', 'Night'];
+  // Shift types matching backend enum
+  const timeSlots = [
+    { id: 1, name: '3 Hours', description: 'Short shift' },
+    { id: 2, name: '12 Hours', description: 'Half day' },
+    { id: 3, name: '24 Hours', description: 'Full day' }
+  ];
 
   // Fetch dashboard data from API
   const fetchDashboardData = async () => {
@@ -136,7 +157,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
 
     try {
       setIsLoading(true);
-      const response = await fetch('http://elanis.runasp.net/api/Provider/dashboard', {
+      const response = await fetch('https://elanis.runasp.net/api/Provider/dashboard', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -182,7 +203,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
 
     try {
       setIsLoadingProfile(true);
-      const response = await fetch('http://elanis.runasp.net/api/Provider/profile', {
+      const response = await fetch('https://elanis.runasp.net/api/Provider/profile', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -228,7 +249,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
         formData.append('ProfilePicture', profileForm.profilePicture);
       }
 
-      const response = await fetch('http://elanis.runasp.net/api/Provider/profile', {
+      const response = await fetch('https://elanis.runasp.net/api/Provider/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -262,7 +283,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
 
     try {
-      const response = await fetch('http://elanis.runasp.net/api/Provider/profile/availability', {
+      const response = await fetch('https://elanis.runasp.net/api/Provider/profile/availability', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -296,7 +317,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
 
     try {
       setIsLoadingAreas(true);
-      const response = await fetch('http://elanis.runasp.net/api/Provider/working-areas', {
+      const response = await fetch('https://elanis.runasp.net/api/Provider/working-areas', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -333,7 +354,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
 
     try {
-      const response = await fetch('http://elanis.runasp.net/api/Provider/working-areas', {
+      const response = await fetch('https://elanis.runasp.net/api/Provider/working-areas', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -366,7 +387,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
 
     try {
-      const response = await fetch(`http://elanis.runasp.net/api/Provider/working-areas/${areaId}`, {
+      const response = await fetch(`https://elanis.runasp.net/api/Provider/working-areas/${areaId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -389,8 +410,39 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
   };
 
   const handleAcceptRequest = async (requestId: string) => {
-    // TODO: Implement API call to accept request
-    toast.success('Request accepted!');
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://elanis.runasp.net/api/Requests/${requestId}/response`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 2, // 2 = Accepted
+          reason: null
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Request accepted successfully!');
+        // Refresh requests and dashboard
+        fetchProviderRequests();
+        fetchDashboardData();
+      } else {
+        toast.error(result.message || 'Failed to accept request');
+      }
+    } catch (error) {
+      console.error('Error accepting request:', error);
+      toast.error('Failed to accept request');
+    }
   };
 
   const handleRejectRequest = async () => {
@@ -399,18 +451,225 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       return;
     }
 
-    // TODO: Implement API call to reject request
-    toast.success('Request rejected');
-    setShowRejectDialog(false);
-    setSelectedRequestForReject(null);
-    setRejectionReason('');
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://elanis.runasp.net/api/Requests/${selectedRequestForReject.id}/response`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 3, // 3 = Rejected
+          reason: rejectionReason
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Request rejected');
+        setShowRejectDialog(false);
+        setSelectedRequestForReject(null);
+        setRejectionReason('');
+        // Refresh requests and dashboard
+        fetchProviderRequests();
+        fetchDashboardData();
+      } else {
+        toast.error(result.message || 'Failed to reject request');
+      }
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      toast.error('Failed to reject request');
+    }
   };
 
-  const toggleTimeSlot = (slot: string) => {
+  const toggleTimeSlot = (slotId: number) => {
     setSelectedTimeSlots(prev =>
-      prev.includes(slot) ? prev.filter(s => s !== slot) : [...prev, slot]
+      prev.includes(slotId) ? prev.filter(s => s !== slotId) : [...prev, slotId]
     );
   };
+
+  // Fetch availability
+  const fetchAvailability = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      setIsLoadingAvailability(true);
+      // Get dates range for current month
+      const now = new Date();
+      const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+
+      const response = await fetch(
+        `https://elanis.runasp.net/api/Provider/availability?startDate=${startDate}&endDate=${endDate}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        // Backend returns { availability: [], bookedDates: [] }
+        const calendarData = result.data;
+        if (calendarData && calendarData.availability) {
+          setAvailabilities(calendarData.availability);
+        } else if (Array.isArray(result.data)) {
+          // Fallback: if data is directly an array
+          setAvailabilities(result.data);
+        } else {
+          setAvailabilities([]);
+        }
+      } else {
+        console.error(result.message || 'Failed to load availability');
+        if (!response.ok) {
+          toast.error(result.message || 'Failed to load availability');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching availability:', error);
+      toast.error('Failed to load availability');
+    } finally {
+      setIsLoadingAvailability(false);
+    }
+  };
+
+  // Save availability
+  const handleSaveAvailability = async () => {
+    if (selectedDates.length === 0) {
+      toast.error('Please select at least one date');
+      return;
+    }
+
+    if (selectedTimeSlots.length === 0) {
+      toast.error('Please select at least one time slot');
+      return;
+    }
+
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    setIsSavingAvailability(true);
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      // Save each combination of date and time slot
+      for (const date of selectedDates) {
+        for (const shift of selectedTimeSlots) {
+          try {
+            const response = await fetch('https://elanis.runasp.net/api/Provider/availability', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                date: date.toISOString(),
+                isAvailable: true,
+                availableShift: shift,
+                notes: availabilityNotes || ''
+              }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.succeeded) {
+              successCount++;
+            } else {
+              failCount++;
+              const shiftName = timeSlots.find(s => s.id === shift)?.name || 'Unknown';
+              const dateStr = date.toLocaleDateString();
+              errors.push(`${dateStr} - ${shiftName}: ${result.message || 'Failed'}`);
+            }
+          } catch (err) {
+            failCount++;
+            const shiftName = timeSlots.find(s => s.id === shift)?.name || 'Unknown';
+            const dateStr = date.toLocaleDateString();
+            errors.push(`${dateStr} - ${shiftName}: Network error`);
+          }
+        }
+      }
+
+      // Show results
+      if (successCount > 0 && failCount === 0) {
+        toast.success(`✅ ${successCount} availability ${successCount === 1 ? 'entry' : 'entries'} saved successfully!`);
+        setSelectedDates([]);
+        setSelectedTimeSlots([1]);
+        setAvailabilityNotes('');
+        fetchAvailability();
+      } else if (successCount > 0 && failCount > 0) {
+        toast.warning(`⚠️ ${successCount} saved, ${failCount} failed. Check console for details.`);
+        console.error('Failed entries:', errors);
+        fetchAvailability();
+      } else {
+        toast.error(`❌ All entries failed to save. ${errors[0] || 'Unknown error'}`);
+        console.error('All errors:', errors);
+      }
+    } catch (error) {
+      console.error('Error saving availability:', error);
+      toast.error('Failed to save availability');
+    } finally {
+      setIsSavingAvailability(false);
+    }
+  };
+
+  // Delete availability
+  const handleDeleteAvailability = async (id: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://elanis.runasp.net/api/Provider/availability/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success('Availability deleted');
+        fetchAvailability();
+      } else {
+        toast.error(result.message || 'Failed to delete availability');
+      }
+    } catch (error) {
+      console.error('Error deleting availability:', error);
+      toast.error('Failed to delete availability');
+    }
+  };
+
+  // Fetch availability when tab is opened
+  useEffect(() => {
+    if (activeTab === 'availability') {
+      fetchAvailability();
+    }
+  }, [activeTab]);
 
   // Fetch profile when Profile tab is opened
   useEffect(() => {
@@ -423,8 +682,76 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
   useEffect(() => {
     if (activeTab === 'areas') {
       fetchWorkingAreas();
+    } else if (activeTab === 'requests') {
+      // Ensure dashboard data is loaded before fetching requests
+      if (dashboardData?.profileId) {
+        fetchProviderRequests();
+      } else if (!isLoading) {
+        // If dashboard data not loaded yet, load it first
+        fetchDashboardData();
+      }
     }
-  }, [activeTab]);
+  }, [activeTab, dashboardData?.profileId]);
+
+  // Fetch provider requests
+  const fetchProviderRequests = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    // Get provider ID from dashboard data
+    if (!dashboardData?.profileId) {
+      // Don't show error, dashboard data will load automatically
+      console.log('Waiting for dashboard data to load...');
+      return;
+    }
+
+    try {
+      setIsLoadingRequests(true);
+      console.log('Fetching requests for provider:', dashboardData.profileId);
+      
+      const response = await fetch(`https://elanis.runasp.net/api/Requests/provider/${dashboardData.profileId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Response status:', response.status);
+      const result = await response.json();
+      console.log('Response data:', result);
+
+      if (response.ok && result.succeeded) {
+        // Transform the data to match ServiceRequest interface
+        const transformedRequests = (result.data || []).map((req: any) => ({
+          id: req.id,
+          clientName: req.providerName, // This might need to be changed based on actual API response
+          categoryName: req.categoryName,
+          preferredDate: req.preferredDate,
+          shiftType: req.shiftType,
+          shiftTypeName: req.shiftTypeName,
+          status: req.status,
+          statusText: req.statusName,
+          price: req.totalPrice,
+          address: req.address,
+          governorate: '', // Add if available in API
+        }));
+        console.log('Transformed requests:', transformedRequests);
+        setProviderRequests(transformedRequests);
+      } else {
+        console.error('API Error:', result.message, result.errors);
+        toast.error(result.message || 'Failed to load requests');
+      }
+    } catch (error) {
+      console.error('Error fetching provider requests:', error);
+      toast.error('Error retrieving provider requests');
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#E3F2FD]">
@@ -760,49 +1087,121 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
             {activeTab === 'availability' && (
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="mb-6 text-gray-900">Manage Availability</h3>
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="mb-3 text-gray-900">Select Available Days</h4>
-                    <div className="border-2 border-gray-200 rounded-lg p-4">
-                      <Calendar
-                        mode="multiple"
-                        selected={selectedDates}
-                        onSelect={(dates: Date[] | undefined) => setSelectedDates(dates as Date[])}
-                        className="rounded-md"
+                {isLoadingAvailability ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="mb-3 text-gray-900">Select Available Days</h4>
+                      <div className="border-2 border-gray-200 rounded-lg p-4">
+                        <Calendar
+                          mode="multiple"
+                          selected={selectedDates}
+                          onSelect={(dates: Date[] | undefined) => setSelectedDates(dates as Date[])}
+                          className="rounded-md"
+                        />
+                      </div>
+                      <p className="text-sm text-gray-600 mt-2">
+                        {selectedDates.length} day(s) selected
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="mb-3 text-gray-900">Available Shift Duration</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {timeSlots.map(slot => (
+                          <button
+                            key={slot.id}
+                            onClick={() => toggleTimeSlot(slot.id)}
+                            className={`p-4 border-2 rounded-lg transition-all ${
+                              selectedTimeSlots.includes(slot.id)
+                                ? 'border-[#FFA726] bg-[#FFA726] text-white'
+                                : 'border-gray-200 hover:border-[#FFA726]'
+                            }`}
+                          >
+                            <Clock className="w-6 h-6 mx-auto mb-2" />
+                            <p className="text-base font-semibold">{slot.name}</p>
+                            <p className={`text-xs mt-1 ${
+                              selectedTimeSlots.includes(slot.id) ? 'text-white/80' : 'text-gray-500'
+                            }`}>
+                              {slot.description}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-sm text-gray-600 mt-2">
+                        Select shift duration(s) you're available for
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="mb-3 text-gray-900">Notes (Optional)</h4>
+                      <Textarea
+                        value={availabilityNotes}
+                        onChange={(e) => setAvailabilityNotes(e.target.value)}
+                        placeholder="Add any notes about your availability..."
+                        rows={3}
+                        className="focus:border-[#FFA726]"
                       />
                     </div>
-                    <p className="text-sm text-gray-600 mt-2">
-                      {selectedDates.length} day(s) selected
-                    </p>
-                  </div>
 
-                  <div>
-                    <h4 className="mb-3 text-gray-900">Available Time Slots</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {timeSlots.map(slot => (
-                        <button
-                          key={slot}
-                          onClick={() => toggleTimeSlot(slot)}
-                          className={`p-3 border-2 rounded-lg transition-all ${
-                            selectedTimeSlots.includes(slot)
-                              ? 'border-[#FFA726] bg-[#FFA726] text-white'
-                              : 'border-gray-200 hover:border-[#FFA726]'
-                          }`}
-                        >
-                          <Clock className="w-5 h-5 mx-auto mb-1" />
-                          <p className="text-sm">{slot}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                    <button
+                      onClick={handleSaveAvailability}
+                      disabled={isSavingAvailability || selectedDates.length === 0 || selectedTimeSlots.length === 0}
+                      className="w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isSavingAvailability ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Availability'
+                      )}
+                    </button>
 
-                  <button
-                    onClick={() => toast.success('Availability updated!')}
-                    className="px-6 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-                  >
-                    Save Availability
-                  </button>
-                </div>
+                    {availabilities.length > 0 && (
+                      <div className="mt-8">
+                        <h4 className="mb-4 text-gray-900">Your Availability Schedule</h4>
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {availabilities.map(availability => (
+                            <div
+                              key={availability.id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                            >
+                              <div className="flex items-center gap-3">
+                                <CalendarIcon className="w-5 h-5 text-[#FFA726]" />
+                                <div>
+                                  <p className="text-gray-900 font-medium">
+                                    {new Date(availability.date).toLocaleDateString('en-US', {
+                                      weekday: 'short',
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {timeSlots.find(s => s.id === availability.availableShift)?.name || 'Unknown'}
+                                    {availability.notes && ` - ${availability.notes}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteAvailability(availability.id)}
+                                className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <X className="w-5 h-5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -893,8 +1292,13 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
             {activeTab === 'requests' && (
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="mb-6 text-gray-900">Service Requests</h3>
-                <div className="space-y-4">
-                  {recentRequests.map(request => (
+                {isLoadingRequests ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {providerRequests.map(request => (
                     <div key={request.id} className="border-2 border-gray-200 rounded-lg p-4">
                       <div className="flex items-start gap-4">
                         <div className="w-16 h-16 bg-[#FFA726] rounded-full flex items-center justify-center text-white font-bold text-xl">
@@ -949,10 +1353,11 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
                       </div>
                     </div>
                   ))}
-                  {recentRequests.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">No requests yet</p>
-                  )}
-                </div>
+                    {providerRequests.length === 0 && (
+                      <p className="text-center text-gray-500 py-8">No requests yet</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

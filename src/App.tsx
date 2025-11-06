@@ -14,6 +14,8 @@ import { ContactPage } from './components/ContactPage';
 import { FAQPage } from './components/FAQPage';
 import { PrivacyPolicyPage } from './components/PrivacyPolicyPage';
 import { TermsPage } from './components/TermsPage';
+import { PaymentSuccess } from './components/PaymentSuccess';
+import { PaymentCancel } from './components/PaymentCancel';
 import { Toaster } from './components/ui/sonner';
 
 export type UserRole = 'user' | 'provider' | 'admin' | null;
@@ -37,6 +39,23 @@ function App() {
 
   // Load user from localStorage on app start
   useEffect(() => {
+    // Check for payment redirect URLs first
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    const requestId = urlParams.get('request_id');
+    
+    // Handle Stripe payment success redirect
+    if (sessionId && window.location.pathname.includes('success')) {
+      setCurrentPage('payment-success');
+      return;
+    }
+    
+    // Handle Stripe payment cancel redirect
+    if (requestId && window.location.pathname.includes('cancel')) {
+      setCurrentPage('payment-cancel');
+      return;
+    }
+    
     const storedUser = localStorage.getItem('currentUser');
     const accessToken = localStorage.getItem('accessToken');
     
@@ -121,7 +140,7 @@ function App() {
     if (accessToken) {
       try {
         // Call logout API
-        await fetch('http://elanis.runasp.net/api/Account/logout', {
+        await fetch('https://elanis.runasp.net/api/Account/logout', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -200,6 +219,10 @@ function App() {
         return <PrivacyPolicyPage navigate={navigate} />;
       case 'terms':
         return <TermsPage navigate={navigate} />;
+      case 'payment-success':
+        return <PaymentSuccess navigate={navigate} />;
+      case 'payment-cancel':
+        return <PaymentCancel navigate={navigate} />;
       case 'pending-approval':
         return (
           <div className="min-h-screen flex items-center justify-center bg-[#E3F2FD]">

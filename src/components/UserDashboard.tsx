@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User } from '../App';
 import {
   Home, UserCircle, Users, FileText, CreditCard, Star, LogOut,
-  Search, MapPin, Clock, Filter, ChevronRight, X, Calendar, DollarSign
+  Search, MapPin, Clock, Filter, ChevronRight, X, Calendar, DollarSign, Loader2
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -16,203 +16,352 @@ interface UserDashboardProps {
   onLogout: () => void;
 }
 
-interface Caregiver {
-  id: string;
-  name: string;
-  avatar: string;
-  hourlyRate: number;
-  rating: number;
-  reviews: number;
+interface Location {
+  governorate: string;
   city: string;
-  serviceType: string;
-  experience: number;
-  bio: string;
-  specialties: string[];
-  availability: string[];
+  district?: string;
 }
 
-interface Booking {
+interface Category {
   id: string;
-  caregiverId: string;
-  caregiverName: string;
-  caregiverAvatar: string;
-  shiftType: '3h' | '12h' | 'fullday';
+  name: string;
+  nameEn?: string;
+  description?: string;
+  icon?: string;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+interface Availability {
   date: string;
-  time: string;
-  status: 'pending' | 'accepted' | 'paid' | 'in-progress' | 'completed' | 'rejected';
+  isAvailable: boolean;
+  availableShift: number;
+  shiftName: string;
+}
+
+interface ShiftPrice {
+  categoryId: string;
+  categoryName: string;
+  shiftType: number;
+  shiftTypeName: string;
+  pricePerShift: number;
+  pricingId: string;
+}
+
+interface Provider {
+  id: string;
+  fullName: string;
+  avatarUrl: string;
+  categories: Category[];
+  location?: Location;
+  isAvailable: boolean;
+  averageRating: number;
+  hourlyRate: number;
+  bio?: string;
+  workingAreas?: Location[];
+  availability?: Availability[];
+  shiftPrices?: ShiftPrice[];
+  totalReviews?: number;
+}
+
+interface ProviderListResponse {
+  items: Provider[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+interface Request {
+  id: string;
+  providerId: string;
+  providerName: string;
+  providerAvatar: string;
+  categoryId: string;
+  categoryName: string;
+  status: number;
+  statusName: string;
   totalPrice: number;
+  preferredDate: string;
+  shiftType: number;
+  shiftTypeName: string;
+  address: string;
+  description?: string;
+  createdAt: string;
+  acceptedAt?: string;
+  canPay: boolean;
   rating?: number;
   rejectionReason?: string;
 }
 
-const mockCaregivers: Caregiver[] = [
-  {
-    id: '1',
-    name: 'Sarah Johnson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-    hourlyRate: 25,
-    rating: 4.9,
-    reviews: 127,
-    city: 'New York',
-    serviceType: 'Elderly Care',
-    experience: 8,
-    bio: 'Experienced elderly care specialist with a passion for helping seniors maintain their independence.',
-    specialties: ['Dementia Care', 'Mobility Assistance', 'Medication Management'],
-    availability: ['Morning', 'Afternoon'],
-  },
-  {
-    id: '2',
-    name: 'Emily Davis',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emily',
-    hourlyRate: 22,
-    rating: 4.8,
-    reviews: 89,
-    city: 'New York',
-    serviceType: 'Child Care',
-    experience: 5,
-    bio: 'Certified nanny with experience in early childhood education and development.',
-    specialties: ['Newborn Care', 'Educational Activities', 'Meal Preparation'],
-    availability: ['Morning', 'Evening'],
-  },
-  {
-    id: '3',
-    name: 'Michael Brown',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael',
-    hourlyRate: 30,
-    rating: 5.0,
-    reviews: 156,
-    city: 'Los Angeles',
-    serviceType: 'Home Nursing',
-    experience: 12,
-    bio: 'Licensed RN providing professional home healthcare services with specialized training.',
-    specialties: ['Wound Care', 'IV Therapy', 'Post-Op Care'],
-    availability: ['Morning', 'Afternoon', 'Evening'],
-  },
-  {
-    id: '4',
-    name: 'Jennifer Wilson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jennifer',
-    hourlyRate: 24,
-    rating: 4.7,
-    reviews: 73,
-    city: 'Chicago',
-    serviceType: 'Elderly Care',
-    experience: 6,
-    bio: 'Compassionate caregiver dedicated to providing quality care and companionship.',
-    specialties: ['Companionship', 'Light Housekeeping', 'Transportation'],
-    availability: ['Afternoon', 'Evening'],
-  },
-];
+const API_BASE_URL = 'https://elanis.runasp.net/api';
 
 export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) {
   const [activeTab, setActiveTab] = useState('home');
   const [searchCity, setSearchCity] = useState('');
+  const [searchGovernorate, setSearchGovernorate] = useState('');
   const [searchService, setSearchService] = useState('');
-  const [selectedCaregiver, setSelectedCaregiver] = useState<Caregiver | null>(null);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [selectedProviderDetails, setSelectedProviderDetails] = useState<Provider | null>(null);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
-  const [bookingShift, setBookingShift] = useState<'3h' | '12h' | 'fullday'>('3h');
+  const [bookingShift, setBookingShift] = useState<number>(1);
   const [bookingDate, setBookingDate] = useState('');
   const [bookingTime, setBookingTime] = useState('');
-  const [myBookings, setMyBookings] = useState<Booking[]>([
-    {
-      id: 'b1',
-      caregiverId: '1',
-      caregiverName: 'Sarah Johnson',
-      caregiverAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-      shiftType: '12h',
-      date: '2025-10-28',
-      time: '09:00',
-      status: 'completed',
-      totalPrice: 300,
-      rating: 5,
-    },
-    {
-      id: 'b2',
-      caregiverId: '2',
-      caregiverName: 'Emily Davis',
-      caregiverAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emily',
-      shiftType: '3h',
-      date: '2025-10-26',
-      time: '14:00',
-      status: 'accepted',
-      totalPrice: 66,
-    },
-  ]);
+  const [bookingAddress, setBookingAddress] = useState('');
+  const [bookingGovernorate, setBookingGovernorate] = useState('');
+  const [bookingDescription, setBookingDescription] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [myRequests, setMyRequests] = useState<Request[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState<Booking | null>(null);
+  const [selectedRequestForPayment, setSelectedRequestForPayment] = useState<Request | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [showRatingDialog, setShowRatingDialog] = useState(false);
-  const [selectedBookingForRating, setSelectedBookingForRating] = useState<Booking | null>(null);
+  const [selectedRequestForRating, setSelectedRequestForRating] = useState<Request | null>(null);
   const [ratingValue, setRatingValue] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const filteredCaregivers = mockCaregivers.filter(cg => {
-    const cityMatch = !searchCity || cg.city.toLowerCase().includes(searchCity.toLowerCase());
-    const serviceMatch = !searchService || cg.serviceType.toLowerCase().includes(searchService.toLowerCase());
-    return cityMatch && serviceMatch;
-  });
+  useEffect(() => {
+    fetchCategories();
+    // Fetch user requests on initial load for dashboard stats
+    fetchUserRequests();
+  }, []);
 
-  const getShiftPrice = (hourlyRate: number, shift: '3h' | '12h' | 'fullday') => {
-    if (shift === '3h') return hourlyRate * 3;
-    if (shift === '12h') return hourlyRate * 12;
-    return hourlyRate * 24;
+  useEffect(() => {
+    if (activeTab === 'caregivers') {
+      fetchProviders();
+    } else if (activeTab === 'requests') {
+      fetchUserRequests();
+    }
+  }, [activeTab, currentPage]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/Category/active`);
+      const result = await response.json();
+
+      if (result.succeeded && result.data) {
+        setCategories(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
   };
 
-  const handleSendRequest = () => {
-    if (!selectedCaregiver || !bookingDate || !bookingTime) {
+  const fetchUserRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) {
+        toast.error('Please login to view your requests');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/Requests/user`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.succeeded && result.data) {
+        setMyRequests(result.data || []);
+      } else {
+        toast.error(result.message || 'Failed to fetch requests');
+      }
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+      toast.error('Failed to load your requests');
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  const fetchProviders = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (searchGovernorate) params.append('Governorate', searchGovernorate);
+      if (searchCity) params.append('City', searchCity);
+      if (searchService) params.append('Search', searchService);
+      if (selectedCategoryFilter) params.append('CategoryId', selectedCategoryFilter);
+      params.append('Page', currentPage.toString());
+      params.append('PageSize', '10');
+
+      const response = await fetch(`${API_BASE_URL}/Provider?${params.toString()}`);
+      const result = await response.json();
+
+      if (result.succeeded && result.data) {
+        setProviders(result.data.items || []);
+        setTotalPages(result.data.totalPages || 1);
+      } else {
+        toast.error(result.message || 'Failed to fetch providers');
+      }
+    } catch (error) {
+      console.error('Error fetching providers:', error);
+      toast.error('Failed to load providers');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProviderDetails = async (providerId: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/Provider/${providerId}`);
+      const result = await response.json();
+
+      if (result.succeeded && result.data) {
+        setSelectedProviderDetails(result.data);
+      } else {
+        toast.error(result.message || 'Failed to fetch provider details');
+      }
+    } catch (error) {
+      console.error('Error fetching provider details:', error);
+      toast.error('Failed to load provider details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getShiftPrice = (shiftType: number) => {
+    if (!selectedProviderDetails?.shiftPrices || !selectedCategoryId) return 0;
+    const shiftPrice = selectedProviderDetails.shiftPrices.find(
+      sp => sp.shiftType === shiftType && sp.categoryId === selectedCategoryId
+    );
+    return shiftPrice?.pricePerShift || 0;
+  };
+
+  const getShiftTypeName = (shiftType: number) => {
+    switch (shiftType) {
+      case 1: return '3 Hours';
+      case 2: return '12 Hours';
+      case 3: return 'Full Day';
+      default: return 'Unknown';
+    }
+  };
+
+  const handleSendRequest = async () => {
+    if (!selectedProvider || !bookingDate || !bookingTime || !bookingAddress || !bookingGovernorate || !selectedCategoryId) {
       toast.error('Please fill in all booking details');
       return;
     }
 
-    const newBooking: Booking = {
-      id: `b${Date.now()}`,
-      caregiverId: selectedCaregiver.id,
-      caregiverName: selectedCaregiver.name,
-      caregiverAvatar: selectedCaregiver.avatar,
-      shiftType: bookingShift,
-      date: bookingDate,
-      time: bookingTime,
-      status: 'pending',
-      totalPrice: getShiftPrice(selectedCaregiver.hourlyRate, bookingShift),
-    };
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Please login to continue');
+      return;
+    }
 
-    setMyBookings(prev => [newBooking, ...prev]);
-    toast.success('Request sent successfully!');
-    setShowBookingDialog(false);
-    setSelectedCaregiver(null);
-    setActiveTab('requests');
+    setLoading(true);
+    try {
+      const requestData = {
+        providerId: selectedProvider.id,
+        categoryId: selectedCategoryId,
+        shiftType: bookingShift,
+        preferredDate: new Date(`${bookingDate}T${bookingTime}`).toISOString(),
+        address: bookingAddress,
+        governorate: bookingGovernorate,
+        description: bookingDescription,
+      };
+
+      const response = await fetch(`${API_BASE_URL}/Requests`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      const result = await response.json();
+
+      if (result.succeeded && result.data) {
+        toast.success('Request sent successfully!');
+        setShowBookingDialog(false);
+        setSelectedProvider(null);
+        setSelectedProviderDetails(null);
+        setBookingAddress('');
+        setBookingGovernorate('');
+        setBookingDescription('');
+        setActiveTab('requests');
+        // Refresh requests list
+        fetchUserRequests();
+      } else {
+        toast.error(result.message || 'Failed to send request');
+      }
+    } catch (error) {
+      console.error('Error sending request:', error);
+      toast.error('Failed to send request');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePayment = () => {
-    if (!selectedBookingForPayment) return;
+  const handlePayment = async () => {
+    if (!selectedRequestForPayment) return;
 
-    setMyBookings(prev => prev.map(b =>
-      b.id === selectedBookingForPayment.id ? { ...b, status: 'paid' } : b
-    ));
-    toast.success('Payment successful!');
-    setShowPaymentDialog(false);
-    setSelectedBookingForPayment(null);
+    setPaymentLoading(true);
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) {
+        toast.error('Please login to continue');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/Payments/create-checkout`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceRequestId: selectedRequestForPayment.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.succeeded && result.data?.checkoutUrl) {
+        // Redirect to Stripe Checkout
+        window.location.href = result.data.checkoutUrl;
+      } else {
+        toast.error(result.message || 'Failed to create payment session');
+      }
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      toast.error('Failed to initiate payment');
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   const handleRating = () => {
-    if (!selectedBookingForRating) return;
+    if (!selectedRequestForRating) return;
 
-    setMyBookings(prev => prev.map(b =>
-      b.id === selectedBookingForRating.id ? { ...b, rating: ratingValue } : b
-    ));
+    // TODO: Implement actual rating API call
     toast.success('Thank you for your rating!');
     setShowRatingDialog(false);
-    setSelectedBookingForRating(null);
+    setSelectedRequestForRating(null);
   };
 
-  const getStatusBadge = (status: Booking['status']) => {
-    const variants: Record<Booking['status'], { variant: any; label: string }> = {
-      pending: { variant: 'secondary', label: 'Pending' },
-      accepted: { variant: 'default', label: 'Accepted' },
-      paid: { variant: 'default', label: 'Paid' },
-      'in-progress': { variant: 'default', label: 'In Progress' },
-      completed: { variant: 'default', label: 'Completed' },
-      rejected: { variant: 'destructive', label: 'Rejected' },
-    };
-    return <Badge variant={variants[status].variant}>{variants[status].label}</Badge>;
+  const getStatusBadge = (status: number, statusName: string) => {
+    const variant = status === 1 ? 'secondary' : status === 4 ? 'destructive' : 'default';
+    return <Badge variant={variant}>{statusName}</Badge>;
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchProviders();
   };
 
   return (
@@ -314,19 +463,19 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
                   <h3 className="mb-4 text-gray-900">Dashboard Overview</h3>
                   <div className="grid md:grid-cols-3 gap-4">
                     <div className="bg-[#E3F2FD] p-4 rounded-lg">
-                      <p className="text-gray-600 mb-1">Total Bookings</p>
-                      <p className="text-3xl text-gray-900">{myBookings.length}</p>
+                      <p className="text-gray-600 mb-1">Total Requests</p>
+                      <p className="text-3xl text-gray-900">{myRequests.length}</p>
                     </div>
                     <div className="bg-[#E3F2FD] p-4 rounded-lg">
                       <p className="text-gray-600 mb-1">Completed</p>
                       <p className="text-3xl text-gray-900">
-                        {myBookings.filter(b => b.status === 'completed').length}
+                        {myRequests.filter(r => r.status === 5).length}
                       </p>
                     </div>
                     <div className="bg-[#E3F2FD] p-4 rounded-lg">
                       <p className="text-gray-600 mb-1">Pending</p>
                       <p className="text-3xl text-gray-900">
-                        {myBookings.filter(b => b.status === 'pending').length}
+                        {myRequests.filter(r => r.status === 1).length}
                       </p>
                     </div>
                   </div>
@@ -352,20 +501,23 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
 
                 <div className="bg-white rounded-xl shadow-md p-6">
                   <h3 className="mb-4 text-gray-900">Recent Activity</h3>
-                  {myBookings.slice(0, 3).map(booking => (
-                    <div key={booking.id} className="flex items-center gap-4 p-3 border-b last:border-b-0">
+                  {myRequests.slice(0, 3).map(request => (
+                    <div key={request.id} className="flex items-center gap-4 p-3 border-b last:border-b-0">
                       <ImageWithFallback
-                        src={booking.caregiverAvatar}
-                        alt={booking.caregiverName}
+                        src={request.providerAvatar}
+                        alt={request.providerName}
                         className="w-12 h-12 rounded-full"
                       />
                       <div className="flex-1">
-                        <p className="text-gray-900">{booking.caregiverName}</p>
-                        <p className="text-sm text-gray-500">{booking.date} at {booking.time}</p>
+                        <p className="text-gray-900">{request.providerName}</p>
+                        <p className="text-sm text-gray-500">{new Date(request.preferredDate).toLocaleString()}</p>
                       </div>
-                      {getStatusBadge(booking.status)}
+                      {getStatusBadge(request.status, request.statusName)}
                     </div>
                   ))}
+                  {myRequests.length === 0 && (
+                    <p className="text-center text-gray-500 py-4">No recent activity</p>
+                  )}
                 </div>
               </div>
             )}
@@ -416,12 +568,22 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
               <div className="space-y-6">
                 <div className="bg-white rounded-xl shadow-md p-6">
                   <h3 className="mb-4 text-gray-900">Find Caregivers</h3>
-                  <div className="grid md:grid-cols-3 gap-4">
+                  <div className="grid md:grid-cols-3 gap-4 mb-4">
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="text"
-                        placeholder="Search by city..."
+                        placeholder="Governorate..."
+                        value={searchGovernorate}
+                        onChange={(e) => setSearchGovernorate(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                      />
+                    </div>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="City..."
                         value={searchCity}
                         onChange={(e) => setSearchCity(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
@@ -429,102 +591,185 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
                     </div>
                     <div className="relative">
                       <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <select
+                        value={selectedCategoryFilter}
+                        onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none appearance-none bg-white"
+                      >
+                        <option value="">All Categories</option>
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="text"
-                        placeholder="Service type..."
+                        placeholder="Search by name..."
                         value={searchService}
                         onChange={(e) => setSearchService(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                         className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
                       />
                     </div>
-                    <button className="flex items-center justify-center gap-2 px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors">
-                      <Search className="w-5 h-5" />
+                    <button 
+                      onClick={handleSearch}
+                      disabled={loading}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50">
+                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
                       Search
                     </button>
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  {filteredCaregivers.map(caregiver => (
-                    <div key={caregiver.id} className="bg-white rounded-xl shadow-md p-6">
-                      <div className="flex items-start gap-4 mb-4">
-                        <ImageWithFallback
-                          src={caregiver.avatar}
-                          alt={caregiver.name}
-                          className="w-16 h-16 rounded-full"
-                        />
-                        <div className="flex-1">
-                          <h4 className="text-gray-900">{caregiver.name}</h4>
-                          <p className="text-sm text-gray-600">{caregiver.serviceType}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="flex items-center gap-1">
-                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                              <span className="text-sm">{caregiver.rating}</span>
+                {loading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#FFA726]" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {providers.map(provider => (
+                        <div key={provider.id} className="bg-white rounded-xl shadow-md p-6">
+                          <div className="flex items-start gap-4 mb-4">
+                            <ImageWithFallback
+                              src={provider.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + provider.fullName}
+                              alt={provider.fullName}
+                              className="w-16 h-16 rounded-full"
+                            />
+                            <div className="flex-1">
+                              <h4 className="text-gray-900">{provider.fullName}</h4>
+                              <p className="text-sm text-gray-600">{provider.categories.map(c => c.name).join(', ')}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <div className="flex items-center gap-1">
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-sm">{provider.averageRating.toFixed(1)}</span>
+                                </div>
+                                {provider.totalReviews !== undefined && (
+                                  <span className="text-sm text-gray-500">({provider.totalReviews} reviews)</span>
+                                )}
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-500">({caregiver.reviews} reviews)</span>
+                            <div className="text-right">
+                              <p className="text-gray-900">${provider.hourlyRate}/hr</p>
+                              {provider.isAvailable && (
+                                <Badge variant="default" className="mt-1">Available</Badge>
+                              )}
+                            </div>
                           </div>
+                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                            {provider.location && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-4 h-4" />
+                                {provider.location.city}, {provider.location.governorate}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={async () => {
+                              setSelectedProvider(provider);
+                              await fetchProviderDetails(provider.id);
+                            }}
+                            className="w-full py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+                          >
+                            View Profile
+                          </button>
                         </div>
-                        <div className="text-right">
-                          <p className="text-gray-900">${caregiver.hourlyRate}/hr</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          {caregiver.city}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {caregiver.experience} years
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setSelectedCaregiver(caregiver)}
-                        className="w-full py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-                      >
-                        View Profile
-                      </button>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                    {providers.length === 0 && !loading && (
+                      <div className="text-center py-12">
+                        <p className="text-gray-500">No providers found. Try adjusting your search filters.</p>
+                      </div>
+                    )}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center gap-2 mt-6">
+                        <button
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1 || loading}
+                          className="px-4 py-2 border-2 border-[#FFA726] text-[#FFA726] rounded-lg hover:bg-[#FFA726] hover:text-white disabled:opacity-50 transition-colors"
+                        >
+                          Previous
+                        </button>
+                        <span className="px-4 py-2 text-gray-700">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages || loading}
+                          className="px-4 py-2 border-2 border-[#FFA726] text-[#FFA726] rounded-lg hover:bg-[#FFA726] hover:text-white disabled:opacity-50 transition-colors"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
             {activeTab === 'requests' && (
               <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="mb-6 text-gray-900">My Requests</h3>
-                <div className="space-y-4">
-                  {myBookings.map(booking => (
-                    <div key={booking.id} className="border-2 border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-gray-900">My Requests</h3>
+                  <button
+                    onClick={fetchUserRequests}
+                    disabled={loadingRequests}
+                    className="px-4 py-2 text-sm bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {loadingRequests ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    Refresh
+                  </button>
+                </div>
+                {loadingRequests ? (
+                  <div className="flex justify-center items-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#FFA726]" />
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                  {myRequests.map(request => (
+                    <div key={request.id} className="border-2 border-gray-200 rounded-lg p-4">
                       <div className="flex items-start gap-4">
                         <ImageWithFallback
-                          src={booking.caregiverAvatar}
-                          alt={booking.caregiverName}
+                          src={request.providerAvatar}
+                          alt={request.providerName}
                           className="w-16 h-16 rounded-full"
                         />
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-gray-900">{booking.caregiverName}</h4>
-                            {getStatusBadge(booking.status)}
+                            <h4 className="text-gray-900">{request.providerName}</h4>
+                            {getStatusBadge(request.status, request.statusName)}
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
-                            <p>Date: {booking.date}</p>
-                            <p>Time: {booking.time}</p>
-                            <p>Shift: {booking.shiftType}</p>
-                            <p>Price: ${booking.totalPrice}</p>
+                            <p>Date: {new Date(request.preferredDate).toLocaleDateString()}</p>
+                            <p>Time: {new Date(request.preferredDate).toLocaleTimeString()}</p>
+                            <p>Shift: {request.shiftTypeName}</p>
+                            <p>Price: ${request.totalPrice}</p>
+                            <p>Category: {request.categoryName}</p>
+                            <p>Address: {request.address}</p>
                           </div>
-                          {booking.rejectionReason && (
+                          {request.description && (
+                            <div className="bg-gray-50 border border-gray-200 rounded p-2 mb-2">
+                              <p className="text-sm text-gray-700">
+                                <strong>Description:</strong> {request.description}
+                              </p>
+                            </div>
+                          )}
+                          {request.rejectionReason && (
                             <div className="bg-red-50 border border-red-200 rounded p-2 mb-2">
                               <p className="text-sm text-red-800">
-                                <strong>Rejection Reason:</strong> {booking.rejectionReason}
+                                <strong>Rejection Reason:</strong> {request.rejectionReason}
                               </p>
                             </div>
                           )}
                           <div className="flex gap-2">
-                            {booking.status === 'accepted' && (
+                            {request.canPay && (
                               <button
                                 onClick={() => {
-                                  setSelectedBookingForPayment(booking);
+                                  setSelectedRequestForPayment(request);
                                   setShowPaymentDialog(true);
                                 }}
                                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -532,10 +777,10 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
                                 Pay Now
                               </button>
                             )}
-                            {booking.status === 'completed' && !booking.rating && (
+                            {request.status === 5 && !request.rating && (
                               <button
                                 onClick={() => {
-                                  setSelectedBookingForRating(booking);
+                                  setSelectedRequestForRating(request);
                                   setShowRatingDialog(true);
                                 }}
                                 className="px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
@@ -543,14 +788,14 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
                                 Rate Service
                               </button>
                             )}
-                            {booking.rating && (
+                            {request.rating && (
                               <div className="flex items-center gap-1 text-sm">
                                 <span className="text-gray-600">Your rating:</span>
                                 {Array.from({ length: 5 }).map((_, i) => (
                                   <Star
                                     key={i}
                                     className={`w-4 h-4 ${
-                                      i < booking.rating! ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+                                      i < request.rating! ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
                                     }`}
                                   />
                                 ))}
@@ -561,10 +806,11 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
                       </div>
                     </div>
                   ))}
-                  {myBookings.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">No requests yet</p>
-                  )}
-                </div>
+                    {myRequests.length === 0 && (
+                      <p className="text-center text-gray-500 py-8">No requests yet</p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -572,23 +818,23 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="mb-6 text-gray-900">Payment History</h3>
                 <div className="space-y-3">
-                  {myBookings
-                    .filter(b => b.status === 'paid' || b.status === 'completed')
-                    .map(booking => (
-                      <div key={booking.id} className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg">
+                  {myRequests
+                    .filter(r => r.status === 3 || r.status === 4 || r.status === 5)
+                    .map(request => (
+                      <div key={request.id} className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                             <CreditCard className="w-5 h-5 text-green-600" />
                           </div>
                           <div>
-                            <p className="text-gray-900">{booking.caregiverName}</p>
-                            <p className="text-sm text-gray-500">{booking.date}</p>
+                            <p className="text-gray-900">{request.providerName}</p>
+                            <p className="text-sm text-gray-500">{new Date(request.preferredDate).toLocaleDateString()}</p>
                           </div>
                         </div>
-                        <p className="text-gray-900">${booking.totalPrice}</p>
+                        <p className="text-gray-900">${request.totalPrice}</p>
                       </div>
                     ))}
-                  {myBookings.filter(b => b.status === 'paid' || b.status === 'completed').length === 0 && (
+                  {myRequests.filter(r => r.status === 3 || r.status === 4 || r.status === 5).length === 0 && (
                     <p className="text-center text-gray-500 py-8">No payment history</p>
                   )}
                 </div>
@@ -599,26 +845,26 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="mb-6 text-gray-900">My Ratings</h3>
                 <div className="space-y-4">
-                  {myBookings
-                    .filter(b => b.rating)
-                    .map(booking => (
-                      <div key={booking.id} className="border-2 border-gray-200 rounded-lg p-4">
+                  {myRequests
+                    .filter(r => r.rating)
+                    .map(request => (
+                      <div key={request.id} className="border-2 border-gray-200 rounded-lg p-4">
                         <div className="flex items-center gap-4 mb-3">
                           <ImageWithFallback
-                            src={booking.caregiverAvatar}
-                            alt={booking.caregiverName}
+                            src={request.providerAvatar}
+                            alt={request.providerName}
                             className="w-12 h-12 rounded-full"
                           />
                           <div className="flex-1">
-                            <p className="text-gray-900">{booking.caregiverName}</p>
-                            <p className="text-sm text-gray-500">{booking.date}</p>
+                            <p className="text-gray-900">{request.providerName}</p>
+                            <p className="text-sm text-gray-500">{new Date(request.preferredDate).toLocaleDateString()}</p>
                           </div>
                           <div className="flex items-center gap-1">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <Star
                                 key={i}
                                 className={`w-5 h-5 ${
-                                  i < booking.rating! ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+                                  i < request.rating! ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
                                 }`}
                               />
                             ))}
@@ -626,7 +872,7 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
                         </div>
                       </div>
                     ))}
-                  {myBookings.filter(b => b.rating).length === 0 && (
+                  {myRequests.filter(r => r.rating).length === 0 && (
                     <p className="text-center text-gray-500 py-8">No ratings yet</p>
                   )}
                 </div>
@@ -636,74 +882,102 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
         </div>
       </div>
 
-      {/* Caregiver Profile Dialog */}
-      <Dialog open={!!selectedCaregiver && !showBookingDialog} onOpenChange={() => setSelectedCaregiver(null)}>
-        <DialogContent className="max-w-2xl">
-          {selectedCaregiver && (
+      {/* Provider Profile Dialog */}
+      <Dialog open={!!selectedProvider && !showBookingDialog} onOpenChange={() => {
+        setSelectedProvider(null);
+        setSelectedProviderDetails(null);
+      }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          {selectedProviderDetails && (
             <>
               <DialogHeader>
-                <DialogTitle>Caregiver Profile</DialogTitle>
-                <DialogDescription>View detailed information about this caregiver</DialogDescription>
+                <DialogTitle>Provider Profile</DialogTitle>
+                <DialogDescription>View detailed information about this provider</DialogDescription>
               </DialogHeader>
-              <div className="space-y-6">
+              <div className="space-y-6 overflow-y-auto pr-2" style={{maxHeight: 'calc(85vh - 140px)'}}>
                 <div className="flex items-start gap-4">
                   <ImageWithFallback
-                    src={selectedCaregiver.avatar}
-                    alt={selectedCaregiver.name}
+                    src={selectedProviderDetails.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + selectedProviderDetails.fullName}
+                    alt={selectedProviderDetails.fullName}
                     className="w-20 h-20 rounded-full"
                   />
                   <div className="flex-1">
-                    <h3 className="text-gray-900">{selectedCaregiver.name}</h3>
-                    <p className="text-gray-600">{selectedCaregiver.serviceType}</p>
+                    <h3 className="text-gray-900">{selectedProviderDetails.fullName}</h3>
+                    <p className="text-gray-600">{selectedProviderDetails.categories.map(c => c.name).join(', ')}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <div className="flex items-center gap-1">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
                             key={i}
                             className={`w-4 h-4 ${
-                              i < Math.floor(selectedCaregiver.rating)
+                              i < Math.floor(selectedProviderDetails.averageRating)
                                 ? 'fill-yellow-400 text-yellow-400'
                                 : 'text-gray-300'
                             }`}
                           />
                         ))}
                       </div>
-                      <span>{selectedCaregiver.rating} ({selectedCaregiver.reviews} reviews)</span>
+                      <span>{selectedProviderDetails.averageRating.toFixed(1)} ({selectedProviderDetails.totalReviews || 0} reviews)</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl text-gray-900">${selectedCaregiver.hourlyRate}</p>
+                    <p className="text-2xl text-gray-900">${selectedProviderDetails.hourlyRate}</p>
                     <p className="text-sm text-gray-600">per hour</p>
+                    {selectedProviderDetails.isAvailable && (
+                      <Badge variant="default" className="mt-2">Available</Badge>
+                    )}
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="mb-2 text-gray-900">About</h4>
-                  <p className="text-gray-600">{selectedCaregiver.bio}</p>
-                </div>
-
-                <div>
-                  <h4 className="mb-2 text-gray-900">Experience</h4>
-                  <p className="text-gray-600">{selectedCaregiver.experience} years</p>
-                </div>
-
-                <div>
-                  <h4 className="mb-2 text-gray-900">Specialties</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedCaregiver.specialties.map(specialty => (
-                      <Badge key={specialty} variant="secondary">{specialty}</Badge>
-                    ))}
+                {selectedProviderDetails.bio && (
+                  <div>
+                    <h4 className="mb-2 text-gray-900">About</h4>
+                    <p className="text-gray-600">{selectedProviderDetails.bio}</p>
                   </div>
-                </div>
+                )}
 
-                <div>
-                  <h4 className="mb-2 text-gray-900">Availability</h4>
-                  <div className="flex gap-2">
-                    {selectedCaregiver.availability.map(time => (
-                      <Badge key={time}>{time}</Badge>
-                    ))}
+                {selectedProviderDetails.workingAreas && selectedProviderDetails.workingAreas.length > 0 && (
+                  <div>
+                    <h4 className="mb-2 text-gray-900">Working Areas</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProviderDetails.workingAreas.map((area, idx) => (
+                        <Badge key={idx} variant="secondary">
+                          {area.city}, {area.governorate}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {selectedProviderDetails.shiftPrices && selectedProviderDetails.shiftPrices.length > 0 && (
+                  <div>
+                    <h4 className="mb-2 text-gray-900">Service Pricing</h4>
+                    <div className="space-y-2">
+                      {selectedProviderDetails.shiftPrices.map((sp, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                          <span className="text-sm">{sp.categoryName} - {sp.shiftTypeName}</span>
+                          <span className="text-gray-900">${sp.pricePerShift}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedProviderDetails.availability && selectedProviderDetails.availability.length > 0 && (
+                  <div>
+                    <h4 className="mb-2 text-gray-900">Availability</h4>
+                    <div className="space-y-2">
+                      {selectedProviderDetails.availability.slice(0, 5).map((avail, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-2 border rounded">
+                          <span className="text-sm">{new Date(avail.date).toLocaleDateString()}</span>
+                          <Badge variant={avail.isAvailable ? 'default' : 'secondary'}>
+                            {avail.shiftName}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <button
                   onClick={() => setShowBookingDialog(true)}
@@ -719,46 +993,68 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
 
       {/* Booking Dialog */}
       <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-2">
             <DialogTitle>Book Service</DialogTitle>
             <DialogDescription>Select your preferred shift type, date, and time</DialogDescription>
           </DialogHeader>
-          {selectedCaregiver && (
-            <div className="space-y-4">
+          {selectedProviderDetails && selectedProvider && (
+            <div 
+              className="space-y-4 overflow-y-auto px-6 pb-6" 
+              style={{
+                maxHeight: 'calc(95vh - 140px)',
+                overflowY: 'auto'
+              }}
+            >
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <ImageWithFallback
-                  src={selectedCaregiver.avatar}
-                  alt={selectedCaregiver.name}
+                  src={selectedProviderDetails.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + selectedProviderDetails.fullName}
+                  alt={selectedProviderDetails.fullName}
                   className="w-12 h-12 rounded-full"
                 />
                 <div>
-                  <p className="text-gray-900">{selectedCaregiver.name}</p>
-                  <p className="text-sm text-gray-600">{selectedCaregiver.serviceType}</p>
+                  <p className="text-gray-900">{selectedProviderDetails.fullName}</p>
+                  <p className="text-sm text-gray-600">{selectedProviderDetails.categories.map(c => c.name).join(', ')}</p>
                 </div>
               </div>
 
               <div>
-                <label className="block mb-2 text-gray-700">Select Shift Type</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['3h', '12h', 'fullday'] as const).map(shift => (
-                    <button
-                      key={shift}
-                      onClick={() => setBookingShift(shift)}
-                      className={`p-3 border-2 rounded-lg transition-all ${
-                        bookingShift === shift
-                          ? 'border-[#FFA726] bg-[#FFA726] text-white'
-                          : 'border-gray-200 hover:border-[#FFA726]'
-                      }`}
-                    >
-                      <p className="text-sm">
-                        {shift === '3h' ? '3 Hours' : shift === '12h' ? '12 Hours' : 'Full Day'}
-                      </p>
-                      <p className="text-xs">${getShiftPrice(selectedCaregiver.hourlyRate, shift)}</p>
-                    </button>
+                <label className="block mb-2 text-gray-700">Select Category</label>
+                <select
+                  value={selectedCategoryId}
+                  onChange={(e) => setSelectedCategoryId(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                >
+                  <option value="">Choose a category...</option>
+                  {selectedProviderDetails.categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
-                </div>
+                </select>
               </div>
+
+              {selectedCategoryId && selectedProviderDetails.shiftPrices && (
+                <div>
+                  <label className="block mb-2 text-gray-700">Select Shift Type</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {selectedProviderDetails.shiftPrices
+                      .filter(sp => sp.categoryId === selectedCategoryId)
+                      .map(sp => (
+                        <button
+                          key={sp.pricingId}
+                          onClick={() => setBookingShift(sp.shiftType)}
+                          className={`p-3 border-2 rounded-lg transition-all ${
+                            bookingShift === sp.shiftType
+                              ? 'border-[#FFA726] bg-[#FFA726] text-white'
+                              : 'border-gray-200 hover:border-[#FFA726]'
+                          }`}
+                        >
+                          <p className="text-sm">{sp.shiftTypeName}</p>
+                          <p className="text-xs">${sp.pricePerShift}</p>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block mb-2 text-gray-700">Date</label>
@@ -781,25 +1077,58 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
                 />
               </div>
 
-              <div className="bg-[#E3F2FD] p-4 rounded-lg">
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-700">Shift Type:</span>
-                  <span className="text-gray-900">
-                    {bookingShift === '3h' ? '3 Hours' : bookingShift === '12h' ? '12 Hours' : 'Full Day'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-700">Total Price:</span>
-                  <span className="text-xl text-gray-900">
-                    ${getShiftPrice(selectedCaregiver.hourlyRate, bookingShift)}
-                  </span>
-                </div>
+              <div>
+                <label className="block mb-2 text-gray-700">Address</label>
+                <input
+                  type="text"
+                  value={bookingAddress}
+                  onChange={(e) => setBookingAddress(e.target.value)}
+                  placeholder="Enter your address"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                />
               </div>
+
+              <div>
+                <label className="block mb-2 text-gray-700">Governorate</label>
+                <input
+                  type="text"
+                  value={bookingGovernorate}
+                  onChange={(e) => setBookingGovernorate(e.target.value)}
+                  placeholder="Enter governorate"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-2 text-gray-700">Description (Optional)</label>
+                <textarea
+                  value={bookingDescription}
+                  onChange={(e) => setBookingDescription(e.target.value)}
+                  placeholder="Add any special instructions or requirements"
+                  rows={3}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                />
+              </div>
+
+              {selectedCategoryId && (
+                <div className="bg-[#E3F2FD] p-4 rounded-lg">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-700">Shift Type:</span>
+                    <span className="text-gray-900">{getShiftTypeName(bookingShift)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">Total Price:</span>
+                    <span className="text-xl text-gray-900">${getShiftPrice(bookingShift)}</span>
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={handleSendRequest}
-                className="w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+                disabled={loading || !selectedCategoryId}
+                className="w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
+                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
                 Confirm Request
               </button>
             </div>
@@ -812,48 +1141,51 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Payment</DialogTitle>
-            <DialogDescription>Enter your payment details to complete the booking</DialogDescription>
+            <DialogDescription>You will be redirected to Stripe to complete your payment</DialogDescription>
           </DialogHeader>
-          {selectedBookingForPayment && (
-            <div className="space-y-4">
+          {selectedRequestForPayment && (
+            <div className="space-y-6">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-gray-700 mb-2">Amount to pay</p>
-                <p className="text-3xl text-gray-900">${selectedBookingForPayment.totalPrice}</p>
+                <p className="text-3xl text-gray-900">${selectedRequestForPayment.totalPrice}</p>
               </div>
 
-              <div>
-                <label className="block mb-2 text-gray-700">Card Number</label>
-                <input
-                  type="text"
-                  placeholder="1234 5678 9012 3456"
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                />
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  🔒 Secure payment powered by Stripe. You'll be redirected to complete your payment securely.
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block mb-2 text-gray-700">Expiry Date</label>
-                  <input
-                    type="text"
-                    placeholder="MM/YY"
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block mb-2 text-gray-700">CVV</label>
-                  <input
-                    type="text"
-                    placeholder="123"
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                  />
-                </div>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  <strong>Service:</strong> {selectedRequestForPayment.categoryName}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Provider:</strong> {selectedRequestForPayment.providerName}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Date:</strong> {new Date(selectedRequestForPayment.preferredDate).toLocaleDateString()}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Shift:</strong> {selectedRequestForPayment.shiftTypeName}
+                </p>
               </div>
 
               <button
                 onClick={handlePayment}
-                className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                disabled={paymentLoading}
+                className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Pay ${selectedBookingForPayment.totalPrice}
+                {paymentLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Proceed to Payment - ${selectedRequestForPayment.totalPrice}
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -867,16 +1199,16 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
             <DialogTitle>Rate Your Experience</DialogTitle>
             <DialogDescription>Share your feedback about the service</DialogDescription>
           </DialogHeader>
-          {selectedBookingForRating && (
+          {selectedRequestForRating && (
             <div className="space-y-6">
               <div className="text-center">
                 <ImageWithFallback
-                  src={selectedBookingForRating.caregiverAvatar}
-                  alt={selectedBookingForRating.caregiverName}
+                  src={selectedRequestForRating.providerAvatar}
+                  alt={selectedRequestForRating.providerName}
                   className="w-20 h-20 rounded-full mx-auto mb-3"
                 />
-                <p className="text-gray-900">{selectedBookingForRating.caregiverName}</p>
-                <p className="text-sm text-gray-600">{selectedBookingForRating.date}</p>
+                <p className="text-gray-900">{selectedRequestForRating.providerName}</p>
+                <p className="text-sm text-gray-600">{new Date(selectedRequestForRating.preferredDate).toLocaleDateString()}</p>
               </div>
 
               <div className="text-center">

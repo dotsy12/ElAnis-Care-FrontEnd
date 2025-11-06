@@ -49,7 +49,7 @@ export function OTPVerificationPage({ navigate, userId, userRole, onVerification
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://elanis.runasp.net/api/Account/verify-otp', {
+      const response = await fetch('https://elanis.runasp.net/api/Account/verify-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +158,7 @@ export function OTPVerificationPage({ navigate, userId, userRole, onVerification
 
           <div className="mt-8 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-gray-600 mb-1">API Endpoint:</p>
-            <p className="text-sm text-gray-700 break-all">http://elanis.runasp.net/api/Account/verify-otp</p>
+            <p className="text-sm text-gray-700 break-all">https://elanis.runasp.net/api/Account/verify-otp</p>
           </div>
         </div>
       </div>
