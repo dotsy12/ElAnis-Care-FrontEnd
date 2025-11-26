@@ -123,6 +123,7 @@ interface DashboardStats {
 }
 
 export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps) {
+  const API_BASE_URL = 'https://elanis.runasp.net/api';
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -140,28 +141,11 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
   const [providersPage, setProvidersPage] = useState(1);
   const [providersTotalPages, setProvidersTotalPages] = useState(1);
 
-  const [users, setUsers] = useState<RegisteredUser[]>([
-    {
-      id: 'u1',
-      name: 'John Doe',
-      email: 'john@test.com',
-      phone: '+1 (555) 123-4567',
-      role: 'user',
-      status: 'active',
-      joinedDate: '2025-09-15',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-    },
-    {
-      id: 'u2',
-      name: 'Sarah Johnson',
-      email: 'sarah@test.com',
-      phone: '+1 (555) 987-6543',
-      role: 'provider',
-      status: 'active',
-      joinedDate: '2025-08-10',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-    },
-  ]);
+  const [users, setUsers] = useState<RegisteredUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
+  const [searchUsers, setSearchUsers] = useState('');
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -179,26 +163,11 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
   });
   const [isSavingPricing, setIsSavingPricing] = useState(false);
 
-  const [bookings] = useState<Booking[]>([
-    {
-      id: 'b1',
-      userName: 'John Doe',
-      providerName: 'Sarah Johnson',
-      date: '2025-10-25',
-      shiftType: '12h',
-      amount: 300,
-      status: 'Completed',
-    },
-    {
-      id: 'b2',
-      userName: 'Mary Smith',
-      providerName: 'Emily Davis',
-      date: '2025-10-24',
-      shiftType: '3h',
-      amount: 66,
-      status: 'Paid',
-    },
-  ]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+  // Payments for admin
+  const [payments, setPayments] = useState<any[]>([]);
+  const [isLoadingPayments, setIsLoadingPayments] = useState(false);
 
   const [selectedProvider, setSelectedProvider] = useState<PendingProvider | null>(null);
   const [showProviderDialog, setShowProviderDialog] = useState(false);
@@ -212,7 +181,49 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
   const [categoryForm, setCategoryForm] = useState({ name: '', nameEn: '', description: '', icon: '', isActive: true });
   const [isSavingCategory, setIsSavingCategory] = useState(false);
 
-  // Fetch provider details by ID
+  // Fetch completed requests from /Admin/bookings/recent
+  const fetchCompletedRequests = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      return;
+    }
+
+    try {
+      setIsLoadingBookings(true);
+      const response = await fetch(
+        `${API_BASE_URL}/Admin/bookings/recent?limit=10`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        const bookingsData = (result.data || []).map((req: any) => ({
+          id: req.id,
+          userName: req.userName || 'Unknown',
+          providerName: req.providerName || 'Unknown',
+          date: req.date ? new Date(req.date).toLocaleString() : 'N/A',
+          shiftType: req.shift || req.shiftTypeName || 'Unknown',
+          amount: req.amount || 0,
+          status: req.status || 'Completed',
+        }));
+        setBookings(bookingsData);
+      } else {
+        setBookings([]);
+      }
+    } catch (error) {
+      console.error('Error fetching completed requests:', error);
+      setBookings([]);
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  };
   const fetchProviderDetails = async (providerId: string) => {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -337,20 +348,118 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
     }
   };
 
-  const handleSuspendUser = (userId: string) => {
-    setUsers(prev =>
-      prev.map(u =>
-        u.id === userId
-          ? { ...u, status: u.status === 'active' ? 'suspended' : 'active' }
-          : u
-      )
-    );
-    toast.success('User status updated');
+  // Fetch all users from API
+  const fetchUsers = async (page: number = 1, search?: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      setIsLoadingUsers(false);
+      return;
+    }
+
+    try {
+      setIsLoadingUsers(true);
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('pageSize', '10');
+      if (search) params.append('search', search);
+
+      const response = await fetch(
+        `${API_BASE_URL}/Admin/users?${params.toString()}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded && result.data) {
+        const usersData = (result.data.items || []).map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          phone: u.phone || 'N/A',
+          role: u.role,
+          status: u.status,
+          joinedDate: u.joined ? new Date(u.joined).toLocaleDateString() : 'N/A',
+          avatar: u.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
+        }));
+        setUsers(usersData);
+        setUsersTotalPages(result.data.totalPages || 1);
+      } else {
+        setUsers([]);
+        toast.error(result.message || 'Failed to fetch users');
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load users');
+      setUsers([]);
+    } finally {
+      setIsLoadingUsers(false);
+    }
   };
 
-  const handleDeleteUser = (userId: string) => {
-    setUsers(prev => prev.filter(u => u.id !== userId));
-    toast.success('User deleted');
+  const handleSuspendUser = async (userId: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/Admin/users/${userId}/suspend`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success('User suspended successfully');
+        fetchUsers(usersPage, searchUsers);
+      } else {
+        toast.error(result.message || 'Failed to suspend user');
+      }
+    } catch (error) {
+      console.error('Error suspending user:', error);
+      toast.error('Failed to suspend user');
+    }
+  };
+
+  const handleActivateUser = async (userId: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/Admin/users/${userId}/activate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success('User activated successfully');
+        fetchUsers(usersPage, searchUsers);
+      } else {
+        toast.error(result.message || 'Failed to activate user');
+      }
+    } catch (error) {
+      console.error('Error activating user:', error);
+      toast.error('Failed to activate user');
+    }
   };
 
   // Fetch all categories
@@ -705,6 +814,13 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
     fetchPendingProviders();
   }, [providersPage]);
 
+  // Fetch users when Users tab is opened or on mount
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchUsers(usersPage, searchUsers);
+    }
+  }, [activeTab, usersPage]);
+
   // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
@@ -715,7 +831,60 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
     fetchCategoriesWithPricing();
   }, []);
 
-  const totalRevenue = bookings.reduce((sum, b) => sum + b.amount, 0);
+  // Fetch completed requests on mount
+  useEffect(() => {
+    fetchCompletedRequests();
+  }, []);
+
+  // Fetch payments when admin opens payments tab (or on mount)
+  useEffect(() => {
+    if (activeTab === 'payments') {
+      fetchPayments();
+    }
+  }, [activeTab]);
+
+  const fetchPayments = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) return;
+
+    try {
+      setIsLoadingPayments(true);
+      const response = await fetch(`${API_BASE_URL}/Admin/payments`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded && result.data) {
+        // Map transactions from API response
+        const paymentsData = (result.data.transactions || []).map((p: any) => ({
+          id: p.id,
+          transactionId: p.transactionId,
+          userName: p.userName,
+          providerName: p.providerName,
+          date: p.date ? new Date(p.date).toLocaleString() : 'N/A',
+          amount: p.amount || 0,
+          status: p.status,
+          paymentMethod: p.paymentMethod,
+          requestId: p.requestId,
+        }));
+        setPayments(paymentsData);
+      } else {
+        setPayments([]);
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      setPayments([]);
+    } finally {
+      setIsLoadingPayments(false);
+    }
+  };
+
+  const totalRevenue = (payments.length > 0 ? payments.reduce((sum, p) => sum + (p.amount || 0), 0) : bookings.reduce((sum, b) => sum + b.amount, 0));
 
   return (
     <div className="min-h-screen bg-[#E3F2FD]">
@@ -1008,72 +1177,110 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
+                      value={searchUsers}
+                      onChange={(e) => {
+                        setSearchUsers(e.target.value);
+                        setUsersPage(1);
+                      }}
                       placeholder="Search users..."
                       className="pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map(user => (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <ImageWithFallback
-                              src={user.avatar}
-                              alt={user.name}
-                              className="w-8 h-8 rounded-full"
-                            />
-                            <span>{user.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.phone}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.role === 'provider' ? 'default' : 'secondary'}>
-                            {user.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
-                            {user.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{user.joinedDate}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleSuspendUser(user.id)}
-                              className="p-1 text-orange-600 hover:bg-orange-100 rounded transition-colors"
-                              title={user.status === 'active' ? 'Suspend' : 'Activate'}
-                            >
-                              {user.status === 'active' ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                {isLoadingUsers ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFA726]"></div>
+                  </div>
+                ) : (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Phone</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Joined</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map(user => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <ImageWithFallback
+                                  src={user.avatar}
+                                  alt={user.name}
+                                  className="w-8 h-8 rounded-full"
+                                />
+                                <span>{user.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>{user.phone}</TableCell>
+                            <TableCell>
+                              <Badge variant={user.role === 'provider' ? 'default' : 'secondary'}>
+                                {user.role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
+                                {user.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{user.joinedDate}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                {user.status === 'active' ? (
+                                  <button
+                                    onClick={() => handleSuspendUser(user.id)}
+                                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                    title="Suspend user"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleActivateUser(user.id)}
+                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                    title="Activate user"
+                                  >
+                                    <Check className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {users.length === 0 && !isLoadingUsers && (
+                      <p className="text-center text-gray-500 py-8">No users found</p>
+                    )}
+                    {usersTotalPages > 1 && (
+                      <div className="flex gap-2 justify-center mt-6">
+                        <button
+                          onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                          disabled={usersPage === 1}
+                          className="px-4 py-2 border-2 border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          Previous
+                        </button>
+                        <span className="px-4 py-2">Page {usersPage} of {usersTotalPages}</span>
+                        <button
+                          onClick={() => setUsersPage(p => Math.min(usersTotalPages, p + 1))}
+                          disabled={usersPage === usersTotalPages}
+                          className="px-4 py-2 border-2 border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
@@ -1303,32 +1510,50 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
                   <p className="text-3xl">${totalRevenue}</p>
                 </div>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Transaction ID</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Provider</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bookings.map(booking => (
-                      <TableRow key={booking.id}>
-                        <TableCell className="font-mono text-sm">{booking.id}</TableCell>
-                        <TableCell>{booking.userName}</TableCell>
-                        <TableCell>{booking.providerName}</TableCell>
-                        <TableCell>{booking.date}</TableCell>
-                        <TableCell>${booking.amount}</TableCell>
-                        <TableCell>
-                          <Badge variant="default">{booking.status}</Badge>
-                        </TableCell>
+                {isLoadingPayments ? (
+                  <div className="flex justify-center items-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFA726]"></div>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Transaction ID</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Provider</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Method</TableHead>
+                        <TableHead>Request ID</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {payments.length > 0 ? (
+                        payments.map((payment: any) => (
+                          <TableRow key={payment.id || payment.transactionId}>
+                            <TableCell className="font-mono text-sm">{payment.transactionId || payment.id || '—'}</TableCell>
+                            <TableCell>{payment.userName || '—'}</TableCell>
+                            <TableCell>{payment.providerName || '—'}</TableCell>
+                            <TableCell>{payment.date || '—'}</TableCell>
+                            <TableCell>${payment.amount || 0}</TableCell>
+                            <TableCell>
+                              <Badge variant="default">{payment.status || 'Pending'}</Badge>
+                            </TableCell>
+                            <TableCell>{payment.paymentMethod || '—'}</TableCell>
+                            <TableCell className="font-mono text-sm">{payment.requestId || '—'}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                            No payment transactions found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
               </div>
             )}
           </div>
