@@ -187,3 +187,20 @@
 html {
   font-size: var(--font-size);
 }
+
+/* Ensure provider request action buttons are visible and use intended colors
+   Override any global hover/opacity rules that accidentally hide these buttons. */
+.request-action {
+  background-color: #1E90FF !important;
+  color: #ffffff !important;
+}
+.request-action:hover {
+  background-color: #1565c0 !important;
+}
+.request-action-complete {
+  background-color: #22c55e !important;
+  color: #ffffff !important;
+}
+.request-action-complete:hover {
+  background-color: #16a34a !important;
+}

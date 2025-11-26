@@ -6,6 +6,9 @@ import {
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { toast } from 'sonner';
+import ReviewForm from './reviews/ReviewForm';
+import SubmittedReview from './reviews/SubmittedReview';
+import { fetchReviewByRequest, fetchUserReviews, Review } from '../api/reviews';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -125,8 +128,13 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [selectedRequestForRating, setSelectedRequestForRating] = useState<Request | null>(null);
   const [ratingValue, setRatingValue] = useState(5);
+  const [fetchedReview, setFetchedReview] = useState<any | null>(null);
+  const [loadingFetchedReview, setLoadingFetchedReview] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  // Ratings (loaded from API)
+  const [myRatings, setMyRatings] = useState<Review[]>([]);
+  const [loadingRatings, setLoadingRatings] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -141,6 +149,67 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
       fetchUserRequests();
     }
   }, [activeTab, currentPage]);
+
+  // Load the existing review for a selected request if it's completed
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (!selectedRequestForRating) return setFetchedReview(null);
+      // Only fetch review when request is completed
+      if (Number(selectedRequestForRating.status) !== 6) {
+        setFetchedReview(null);
+        return;
+      }
+
+      setLoadingFetchedReview(true);
+      try {
+        const res = await fetchReviewByRequest(selectedRequestForRating.id);
+        if (!mounted) return;
+        if (res?.succeeded && res.data) {
+          setFetchedReview(res.data);
+        } else {
+          setFetchedReview(null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch review by request', err);
+        setFetchedReview(null);
+      } finally {
+        if (mounted) setLoadingFetchedReview(false);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [selectedRequestForRating]);
+
+  // Load user ratings when the Ratings tab is active
+  useEffect(() => {
+    let mounted = true;
+    if (activeTab !== 'ratings') return;
+
+    const loadRatings = async () => {
+      setLoadingRatings(true);
+      try {
+        const res = await fetchUserReviews();
+        if (!mounted) return;
+        if (res?.succeeded && res.data) {
+          setMyRatings(res.data || []);
+        } else {
+          setMyRatings([]);
+          // Only show an error if message exists
+          if (res?.message) toast.error(res.message);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user reviews', err);
+        toast.error('Failed to load ratings');
+        setMyRatings([]);
+      } finally {
+        if (mounted) setLoadingRatings(false);
+      }
+    };
+
+    loadRatings();
+    return () => { mounted = false; };
+  }, [activeTab]);
 
   const fetchCategories = async () => {
     try {
@@ -354,15 +423,42 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
     setSelectedRequestForRating(null);
   };
 
-  const getStatusBadge = (status: number, statusName: string) => {
-    const variant = status === 1 ? 'secondary' : status === 4 ? 'destructive' : 'default';
-    return <Badge variant={variant}>{statusName}</Badge>;
+const statusStyles = {
+  1: { backgroundColor: '#F3F4F6', color: '#111827' },
+  2: { backgroundColor: '#3B82F6', color: '#FFFFFF' },
+  3: { backgroundColor: '#EF4444', color: '#FFFFFF' },
+  4: { backgroundColor: '#10B981', color: '#FFFFFF' },
+  5: { backgroundColor: '#F59E0B', color: '#111827' },
+  6: { backgroundColor: '#8B5CF6', color: '#FFFFFF' },
+  7: { backgroundColor: '#F97316', color: '#FFFFFF' },
+  8: { backgroundColor: '#EC4899', color: '#FFFFFF' },
+};
+
+const getStatusBadge = (status: number, statusName: string) => {
+  const style = statusStyles[status] || {
+    backgroundColor: '#E5E7EB',
+    color: '#111827',
   };
 
+  return (
+    <Badge
+      style={{
+        ...style,
+        padding: "4px 8px",
+        borderRadius: "6px",
+        fontSize: "12px",
+        fontWeight: 600,
+      }}
+    >
+      {statusName}
+    </Badge>
+  );
+};
   const handleSearch = () => {
     setCurrentPage(1);
     fetchProviders();
   };
+
 
   return (
     <div className="min-h-screen bg-[#E3F2FD]">
@@ -777,7 +873,7 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
                                 Pay Now
                               </button>
                             )}
-                            {request.status === 5 && !request.rating && (
+                            {request.status === 6 && (
                               <button
                                 onClick={() => {
                                   setSelectedRequestForRating(request);
@@ -844,36 +940,42 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
             {activeTab === 'ratings' && (
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="mb-6 text-gray-900">My Ratings</h3>
-                <div className="space-y-4">
-                  {myRequests
-                    .filter(r => r.rating)
-                    .map(request => (
-                      <div key={request.id} className="border-2 border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center gap-4 mb-3">
-                          <ImageWithFallback
-                            src={request.providerAvatar}
-                            alt={request.providerName}
-                            className="w-12 h-12 rounded-full"
-                          />
-                          <div className="flex-1">
-                            <p className="text-gray-900">{request.providerName}</p>
-                            <p className="text-sm text-gray-500">{new Date(request.preferredDate).toLocaleDateString()}</p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-5 h-5 ${
-                                  i < request.rating! ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                                }`}
+                <div>
+                  {loadingRatings ? (
+                    <div className="flex justify-center items-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-[#FFA726]" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {myRatings.length > 0 ? (
+                        myRatings.map((rev) => (
+                          <div key={rev.id} className="border-2 border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center gap-4 mb-3">
+                              <ImageWithFallback
+                                src={rev.clientAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(rev.clientName)}
+                                alt={rev.clientName}
+                                className="w-12 h-12 rounded-full"
                               />
-                            ))}
+                              <div className="flex-1">
+                                <p className="text-gray-900">{rev.providerName || rev.clientName}</p>
+                                <p className="text-sm text-gray-500">{new Date(rev.createdAt).toLocaleDateString()}</p>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`w-5 h-5 ${i < rev.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            {rev.comment && <p className="text-gray-700">{rev.comment}</p>}
                           </div>
-                        </div>
-                      </div>
-                    ))}
-                  {myRequests.filter(r => r.rating).length === 0 && (
-                    <p className="text-center text-gray-500 py-8">No ratings yet</p>
+                        ))
+                      ) : (
+                        <p className="text-center text-gray-500 py-8">No ratings yet</p>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -882,114 +984,164 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
         </div>
       </div>
 
-      {/* Provider Profile Dialog */}
-      <Dialog open={!!selectedProvider && !showBookingDialog} onOpenChange={() => {
-        setSelectedProvider(null);
-        setSelectedProviderDetails(null);
-      }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-          {selectedProviderDetails && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Provider Profile</DialogTitle>
-                <DialogDescription>View detailed information about this provider</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-6 overflow-y-auto pr-2" style={{maxHeight: 'calc(85vh - 140px)'}}>
-                <div className="flex items-start gap-4">
-                  <ImageWithFallback
-                    src={selectedProviderDetails.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + selectedProviderDetails.fullName}
-                    alt={selectedProviderDetails.fullName}
-                    className="w-20 h-20 rounded-full"
-                  />
-                  <div className="flex-1">
-                    <h3 className="text-gray-900">{selectedProviderDetails.fullName}</h3>
-                    <p className="text-gray-600">{selectedProviderDetails.categories.map(c => c.name).join(', ')}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-4 h-4 ${
-                              i < Math.floor(selectedProviderDetails.averageRating)
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span>{selectedProviderDetails.averageRating.toFixed(1)} ({selectedProviderDetails.totalReviews || 0} reviews)</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl text-gray-900">${selectedProviderDetails.hourlyRate}</p>
-                    <p className="text-sm text-gray-600">per hour</p>
-                    {selectedProviderDetails.isAvailable && (
-                      <Badge variant="default" className="mt-2">Available</Badge>
-                    )}
-                  </div>
+ {/* Provider Profile Dialog */}
+<Dialog
+  open={!!selectedProvider && !showBookingDialog}
+  onOpenChange={() => {
+    setSelectedProvider(null);
+    setSelectedProviderDetails(null);
+  }}
+>
+  <DialogContent
+    className="max-w-2xl max-h-[95vh] flex flex-col p-0" // ✅ شلنا overflow-hidden وضبطنا max-height
+  >
+    {selectedProviderDetails && (
+      <>
+        {/* الهيدر */}
+        <DialogHeader className="px-6 pt-6 pb-2">
+          <DialogTitle>Provider Profile</DialogTitle>
+          <DialogDescription>
+            View detailed information about this provider
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* منطقة التمرير */}
+        <div
+          className="space-y-6 overflow-y-auto px-6 pb-6"
+          style={{
+            maxHeight: "calc(95vh - 140px)", // ✅ زي البوكينج بالضبط
+            overflowY: "auto",
+          }}
+        >
+          <div className="flex items-start gap-4">
+            <ImageWithFallback
+              src={
+                selectedProviderDetails.avatarUrl ||
+                "https://api.dicebear.com/7.x/avataaars/svg?seed=" +
+                  selectedProviderDetails.fullName
+              }
+              alt={selectedProviderDetails.fullName}
+              className="w-20 h-20 rounded-full"
+            />
+            <div className="flex-1">
+              <h3 className="text-gray-900">
+                {selectedProviderDetails.fullName}
+              </h3>
+              <p className="text-gray-600">
+                {selectedProviderDetails.categories
+                  .map((c) => c.name)
+                  .join(", ")}
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-4 h-4 ${
+                        i < Math.floor(selectedProviderDetails.averageRating)
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-gray-300"
+                      }`}
+                    />
+                  ))}
                 </div>
-
-                {selectedProviderDetails.bio && (
-                  <div>
-                    <h4 className="mb-2 text-gray-900">About</h4>
-                    <p className="text-gray-600">{selectedProviderDetails.bio}</p>
-                  </div>
-                )}
-
-                {selectedProviderDetails.workingAreas && selectedProviderDetails.workingAreas.length > 0 && (
-                  <div>
-                    <h4 className="mb-2 text-gray-900">Working Areas</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProviderDetails.workingAreas.map((area, idx) => (
-                        <Badge key={idx} variant="secondary">
-                          {area.city}, {area.governorate}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {selectedProviderDetails.shiftPrices && selectedProviderDetails.shiftPrices.length > 0 && (
-                  <div>
-                    <h4 className="mb-2 text-gray-900">Service Pricing</h4>
-                    <div className="space-y-2">
-                      {selectedProviderDetails.shiftPrices.map((sp, idx) => (
-                        <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                          <span className="text-sm">{sp.categoryName} - {sp.shiftTypeName}</span>
-                          <span className="text-gray-900">${sp.pricePerShift}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {selectedProviderDetails.availability && selectedProviderDetails.availability.length > 0 && (
-                  <div>
-                    <h4 className="mb-2 text-gray-900">Availability</h4>
-                    <div className="space-y-2">
-                      {selectedProviderDetails.availability.slice(0, 5).map((avail, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 border rounded">
-                          <span className="text-sm">{new Date(avail.date).toLocaleDateString()}</span>
-                          <Badge variant={avail.isAvailable ? 'default' : 'secondary'}>
-                            {avail.shiftName}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  onClick={() => setShowBookingDialog(true)}
-                  className="w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-                >
-                  Send Request
-                </button>
+                <span>
+                  {selectedProviderDetails.averageRating.toFixed(1)} (
+                  {selectedProviderDetails.totalReviews || 0} reviews)
+                </span>
               </div>
-            </>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl text-gray-900">
+                ${selectedProviderDetails.hourlyRate}
+              </p>
+              <p className="text-sm text-gray-600">per hour</p>
+              {selectedProviderDetails.isAvailable && (
+                <Badge variant="default" className="mt-2">
+                  Available
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* باقي الأقسام */}
+          {selectedProviderDetails.bio && (
+            <div>
+              <h4 className="mb-2 text-gray-900">About</h4>
+              <p className="text-gray-600">{selectedProviderDetails.bio}</p>
+            </div>
           )}
-        </DialogContent>
-      </Dialog>
+
+          {selectedProviderDetails.workingAreas?.length > 0 && (
+            <div>
+              <h4 className="mb-2 text-gray-900">Working Areas</h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedProviderDetails.workingAreas.map((area, idx) => (
+                  <Badge key={idx} variant="secondary">
+                    {area.city}, {area.governorate}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {selectedProviderDetails.shiftPrices?.length > 0 && (
+            <div>
+              <h4 className="mb-2 text-gray-900">Service Pricing</h4>
+              <div className="space-y-2">
+                {selectedProviderDetails.shiftPrices.map((sp, idx) => (
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                  >
+                    <span className="text-sm">
+                      {sp.categoryName} - {sp.shiftTypeName}
+                    </span>
+                    <span className="text-gray-900">${sp.pricePerShift}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {selectedProviderDetails.availability?.length > 0 && (
+            <div>
+              <h4 className="mb-2 text-gray-900">Availability</h4>
+              <div className="space-y-2">
+                {selectedProviderDetails.availability
+                  .slice(0, 5)
+                  .map((avail, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 border rounded"
+                    >
+                      <span className="text-sm">
+                        {new Date(avail.date).toLocaleDateString()}
+                      </span>
+                      <Badge
+                        variant={
+                          avail.isAvailable ? "default" : "secondary"
+                        }
+                      >
+                        {avail.shiftName}
+                      </Badge>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => setShowBookingDialog(true)}
+            className="w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+          >
+            Send Request
+          </button>
+        </div>
+      </>
+    )}
+  </DialogContent>
+</Dialog>
 
       {/* Booking Dialog */}
       <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
@@ -1211,40 +1363,22 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
                 <p className="text-sm text-gray-600">{new Date(selectedRequestForRating.preferredDate).toLocaleDateString()}</p>
               </div>
 
-              <div className="text-center">
-                <p className="mb-3 text-gray-700">How was your experience?</p>
-                <div className="flex justify-center gap-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setRatingValue(i + 1)}
-                      className="transition-transform hover:scale-110"
-                    >
-                      <Star
-                        className={`w-10 h-10 ${
-                          i < ratingValue ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block mb-2 text-gray-700">Comments (Optional)</label>
-                <textarea
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                  rows={4}
-                  placeholder="Share your experience..."
-                />
-              </div>
-
-              <button
-                onClick={handleRating}
-                className="w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-              >
-                Submit Rating
-              </button>
+              {loadingFetchedReview ? (
+                <div className="py-6 text-center">Loading review...</div>
+              ) : Number(selectedRequestForRating.status) === 6 ? (
+                // Completed: either show existing review or the form to submit
+                fetchedReview ? (
+                  <SubmittedReview review={fetchedReview} />
+                ) : (
+                  <ReviewForm
+                    serviceRequestId={selectedRequestForRating.id}
+                    onSuccess={(r) => setFetchedReview(r)}
+                    onClose={() => setShowRatingDialog(false)}
+                  />
+                )
+              ) : (
+                <div className="p-4 text-center text-gray-600">You can leave a review only after the service is completed.</div>
+              )}
             </div>
           )}
         </DialogContent>

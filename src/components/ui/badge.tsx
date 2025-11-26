@@ -17,6 +17,34 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+            // 1: Pending (في انتظار القبول) - أصفر/برتقالي للانتظار
+        pending: "border-transparent bg-amber-500 text-amber-50 shadow-amber-900/10",
+        
+        // 2: Accepted (تم قبوله) - نيلي (Commitment)
+        accepted: "border-transparent bg-indigo-500 text-indigo-50 shadow-indigo-900/10",
+        
+        // 3: PaymentPending (في انتظار الدفع) - برتقالي داكن (Financial Hold)
+        payment_pending: "border-transparent bg-orange-600 text-orange-50 shadow-orange-900/10",
+        
+        // 4: Paid (تم الدفع) - سماوي (Ready to Start)
+        paid: "border-transparent bg-sky-500 text-sky-50 shadow-sky-900/10",
+        
+        // 5: InProgress (جاري التنفيذ) - أزرق (Active Work)
+        in_progress: "border-transparent bg-blue-600 text-white shadow-blue-900/10",
+        
+        // 6: Completed (تم الإكمال) - أخضر (Success)
+        completed: "border-transparent bg-emerald-500 text-white shadow-emerald-900/10",
+        
+        // 7: Cancelled (ملغي) - رمادي فاتح (Cancellation)
+        cancelled: "border border-slate-300 bg-slate-100 text-slate-700",
+        
+        // 8: Rejected (مرفوض) - أحمر داكن (Final Failure)
+        rejected: "border-transparent bg-red-700 text-white shadow-red-900/10",
+
+        // Fallback for unknown status
+        default_fallback: "border-transparent bg-gray-500 text-white",
+        
+  
       },
     },
     defaultVariants: {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { User } from '../App';
 import {
   Home, UserCircle, Calendar as CalendarIcon, MapPin, FileText, DollarSign,
-  LogOut, Check, X, Clock, Star, Bell
+  LogOut, Check, X, Clock, Star, Bell, Loader2
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { toast } from 'sonner';
@@ -10,6 +10,8 @@ import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Calendar } from './ui/calendar';
 import { Textarea } from './ui/textarea';
+import SubmittedReview from './reviews/SubmittedReview';
+import { fetchReviewByRequest } from '../api/reviews';
 
 interface ProviderDashboardProps {
   user: User | null;
@@ -100,6 +102,17 @@ interface ProviderAvailability {
 }
 
 export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboardProps) {
+  // ServiceRequestStatus enum values (keep in sync with backend)
+  const STATUS = {
+      Pending: 1,
+      Accepted: 2,
+      PaymentPending: 3,
+      Paid: 4,
+      InProgress: 5,
+      Completed: 6,
+      Cancelled: 7,
+      Rejected: 8,
+  } as const;
   const [activeTab, setActiveTab] = useState('home');
   const [selectedDates, setSelectedDates] = useState<Date[]>([new Date()]);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<number[]>([1]); // Changed to numbers
@@ -122,6 +135,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
   // Provider Requests
   const [providerRequests, setProviderRequests] = useState<ServiceRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [requestReviews, setRequestReviews] = useState<Record<string, any | null>>({});
   
   // Profile Data
   const [profileData, setProfileData] = useState<ProviderProfile | null>(null);
@@ -137,6 +151,8 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [selectedRequestForReject, setSelectedRequestForReject] = useState<ServiceRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [loadingStartJobId, setLoadingStartJobId] = useState<string | null>(null);
+  const [loadingCompleteJobId, setLoadingCompleteJobId] = useState<string | null>(null);
 
   // Shift types matching backend enum
   const timeSlots = [
@@ -155,6 +171,20 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       return;
     }
 
+
+    const getStatusVariant = (status: number) => {
+  switch (status) {
+    case 1: return "pending";
+    case 2: return "accepted";
+    case 3: return "payment_pending";
+    case 4: return "paid";
+    case 5: return "in_progress";
+    case 6: return "completed";
+    case 7: return "cancelled";
+    case 8: return "rejected";
+    default: return "default_fallback";
+  }
+};
     try {
       setIsLoading(true);
       const response = await fetch('https://elanis.runasp.net/api/Provider/dashboard', {
@@ -170,6 +200,16 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       if (response.ok && result.succeeded) {
         setDashboardData(result.data);
         setWorkAreas(result.data.workingAreas || []);
+        // Persist provider id so requests can be fetched even if
+        // dashboard data isn't immediately available (page reloads, etc.)
+        try {
+          if (result.data && result.data.profileId) {
+            localStorage.setItem('providerId', String(result.data.profileId));
+          }
+        } catch (e) {
+          // ignore localStorage exceptions
+          console.debug('Could not persist providerId:', e);
+        }
       } else {
         toast.error(result.message || 'Failed to load dashboard');
       }
@@ -489,6 +529,79 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
+    // Start job (provider only)
+    const handleStartJob = async (requestId: string) => {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) {
+        toast.error('Authentication required');
+        return;
+      }
+
+      try {
+        setLoadingStartJobId(requestId);
+        const response = await fetch(`https://elanis.runasp.net/api/Requests/${requestId}/start`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = await response.json();
+        if (response.ok && result.succeeded) {
+          toast.success(result.message || 'Service started successfully');
+          // Refresh data
+          fetchProviderRequests();
+          fetchDashboardData();
+        } else {
+          // show validation or structured error
+          toast.error(result.message || 'Failed to start service');
+          console.error('Start job error:', result);
+        }
+      } catch (error) {
+        console.error('Error starting job:', error);
+        toast.error('Failed to start job');
+      } finally {
+        setLoadingStartJobId(null);
+      }
+    };
+
+    // Complete job (provider only)
+    const handleCompleteJob = async (requestId: string) => {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) {
+        toast.error('Authentication required');
+        return;
+      }
+
+      try {
+        setLoadingCompleteJobId(requestId);
+        const response = await fetch(`https://elanis.runasp.net/api/Requests/${requestId}/complete`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = await response.json();
+        if (response.ok && result.succeeded) {
+          toast.success(result.message || 'Service completed successfully');
+          // Refresh data
+          fetchProviderRequests();
+          fetchDashboardData();
+        } else {
+          toast.error(result.message || 'Failed to complete service');
+          console.error('Complete job error:', result);
+        }
+      } catch (error) {
+        console.error('Error completing job:', error);
+        toast.error('Failed to complete job');
+      } finally {
+        setLoadingCompleteJobId(null);
+      }
+    };
+
   const toggleTimeSlot = (slotId: number) => {
     setSelectedTimeSlots(prev =>
       prev.includes(slotId) ? prev.filter(s => s !== slotId) : [...prev, slotId]
@@ -683,13 +796,10 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     if (activeTab === 'areas') {
       fetchWorkingAreas();
     } else if (activeTab === 'requests') {
-      // Ensure dashboard data is loaded before fetching requests
-      if (dashboardData?.profileId) {
-        fetchProviderRequests();
-      } else if (!isLoading) {
-        // If dashboard data not loaded yet, load it first
-        fetchDashboardData();
-      }
+      // Try to fetch provider requests. fetchProviderRequests will
+      // use dashboardData.profileId when available or fall back to
+      // a persisted providerId in localStorage.
+      fetchProviderRequests();
     }
   }, [activeTab, dashboardData?.profileId]);
 
@@ -701,18 +811,21 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       return;
     }
 
-    // Get provider ID from dashboard data
-    if (!dashboardData?.profileId) {
-      // Don't show error, dashboard data will load automatically
-      console.log('Waiting for dashboard data to load...');
+    // Get provider ID from dashboard data or from persisted storage
+    const storedProviderId = localStorage.getItem('providerId');
+    const providerIdToUse = dashboardData?.profileId || storedProviderId;
+
+    if (!providerIdToUse) {
+      // Don't show error, dashboard or stored id will be available soon
+      console.log('Waiting for dashboard data or stored providerId to load...');
       return;
     }
 
     try {
       setIsLoadingRequests(true);
-      console.log('Fetching requests for provider:', dashboardData.profileId);
+      console.log('Fetching requests for provider:', providerIdToUse);
       
-      const response = await fetch(`https://elanis.runasp.net/api/Requests/provider/${dashboardData.profileId}`, {
+      const response = await fetch(`https://elanis.runasp.net/api/Requests/provider/${providerIdToUse}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -726,19 +839,29 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
 
       if (response.ok && result.succeeded) {
         // Transform the data to match ServiceRequest interface
-        const transformedRequests = (result.data || []).map((req: any) => ({
-          id: req.id,
-          clientName: req.providerName, // This might need to be changed based on actual API response
-          categoryName: req.categoryName,
-          preferredDate: req.preferredDate,
-          shiftType: req.shiftType,
-          shiftTypeName: req.shiftTypeName,
-          status: req.status,
-          statusText: req.statusName,
-          price: req.totalPrice,
-          address: req.address,
-          governorate: '', // Add if available in API
-        }));
+        const transformedRequests = (result.data || []).map((req: any) => {
+          // Coerce status to number when possible (API might send string)
+          const numericStatus = typeof req.status === 'number' ? req.status : parseInt(req.status, 10) || 0;
+          return {
+            id: req.id,
+            // The API may return clientName or providerName depending on endpoint; prefer clientName then fallback
+            clientName: req.clientName || req.userName || req.providerName || 'Client',
+            categoryName: req.categoryName,
+            preferredDate: req.preferredDate,
+            shiftType: req.shiftType,
+            shiftTypeName: req.shiftTypeName,
+            status: numericStatus,
+            // keep both textual fields if provided
+            statusText: req.statusText || req.statusName || String(req.status),
+            statusName: req.statusName || req.statusText || String(req.status),
+            price: req.totalPrice || req.price || 0,
+            address: req.address,
+            governorate: req.governorate || '',
+            // pass through any flags
+            canStart: req.canStart,
+            canComplete: req.canComplete,
+          };
+        });
         console.log('Transformed requests:', transformedRequests);
         setProviderRequests(transformedRequests);
       } else {
@@ -753,6 +876,50 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
+  // Load review for a specific request
+  const loadReviewForRequest = async (requestId: string) => {
+    try {
+      const res = await fetchReviewByRequest(requestId);
+      if (res?.succeeded && res.data) {
+        setRequestReviews(prev => ({ ...prev, [requestId]: res.data }));
+      } else {
+        setRequestReviews(prev => ({ ...prev, [requestId]: null }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch review for request', err);
+      setRequestReviews(prev => ({ ...prev, [requestId]: null }));
+    }
+  };
+
+  // Helpers to determine state from different API shapes
+  const canStartRequest = (r: ServiceRequest) => {
+    // If backend provides explicit flags prefer them
+    if ((r as any).canStart === true) return true;
+    // Prefer numeric status when available
+    const numeric = Number((r as any).status) || 0;
+    if (numeric === STATUS.Paid) return true;
+    // Fall back to textual checks (English + common Arabic words)
+    const statusText = ((r as any).statusText || (r as any).statusName || String(r.status || '')).toString().toLowerCase();
+    const paidKeywords = ['paid', 'paymentpaid', 'payment', 'مدفوع', 'مدفوعة', 'تم الدفع', 'مدفوعاً', 'مدفوعه'];
+    return paidKeywords.some(k => statusText.includes(k));
+  };
+
+  const canCompleteRequest = (r: ServiceRequest) => {
+    // If backend provides explicit flags prefer them
+    if ((r as any).canComplete === true) return true;
+    const statusText = ((r as any).statusText || (r as any).statusName || String(r.status || '')).toString().toLowerCase();
+    return Number((r as any).status) === 5 || statusText.includes('inprogress') || statusText.includes('in process') || statusText.includes('in-progress');
+  };
+const statusStyles = {
+  1: { backgroundColor: '#F3F4F6', color: '#111827' }, // gray-100 bg, gray-900 text
+  2: { backgroundColor: '#3B82F6', color: '#FFFFFF' }, // blue-500 bg, white text
+  3: { backgroundColor: '#EF4444', color: '#FFFFFF' }, // red-500 bg, white text
+  4: { backgroundColor: '#10B981', color: '#FFFFFF' }, // green-500 bg, white text
+  5: { backgroundColor: '#F59E0B', color: '#111827' }, // yellow-500 bg, gray-900 text
+  6: { backgroundColor: '#8B5CF6', color: '#FFFFFF' }, // purple-500 bg, white text
+  7: { backgroundColor: '#F97316', color: '#FFFFFF' }, // orange-500 bg, white text
+  8: { backgroundColor: '#EC4899', color: '#FFFFFF' }, // pink-500 bg, white text
+};
   return (
     <div className="min-h-screen bg-[#E3F2FD]">
       {/* Header */}
@@ -1307,17 +1474,12 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="text-gray-900">{request.clientName}</h4>
-                            <Badge
-                              variant={
-                                request.status === 2
-                                  ? 'default'
-                                  : request.status === 3
-                                  ? 'destructive'
-                                  : 'secondary'
-                              }
-                            >
-                              {request.statusText}
-                            </Badge>
+               
+
+                  <Badge style={(statusStyles as any)[request.status]}>
+                    {request.statusText}
+                  </Badge>
+
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
                             <p>📍 {request.address}</p>
@@ -1328,6 +1490,23 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
                           <p className="text-lg text-gray-900 mb-3">
                             Payment: <span>${request.price}</span>
                           </p>
+
+                          {/* Show review if request is completed */}
+                          {Number(request.status) === 6 && (
+                            <div className="mb-4 p-3 border-l-4 border-purple-500 bg-purple-50 rounded">
+                              {requestReviews[request.id] ? (
+                                <SubmittedReview review={requestReviews[request.id]} />
+                              ) : (
+                                <button
+                                  onClick={() => loadReviewForRequest(request.id)}
+                                  className="text-sm text-purple-600 hover:text-purple-700"
+                                >
+                                  {requestReviews[request.id] === null ? 'No review yet' : 'Load review...'}
+                                </button>
+                              )}
+                            </div>
+                          )}
+
                           {request.status === 1 && (
                             <div className="flex gap-2">
                               <button
@@ -1346,6 +1525,56 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
                               >
                                 <X className="w-4 h-4" />
                                 Reject
+                              </button>
+                            </div>
+                          )}
+                          {/* Payment Pending - show waiting button, hide Start Job */}
+                          {(Number(request.status) === STATUS.PaymentPending) && (
+                            <div className="flex gap-2">
+                              <button
+                                className="flex items-center gap-2 px-4 py-2 bg-gray-400 text-gray-700 rounded-lg cursor-not-allowed"
+                                disabled
+                                title="Please wait until payment is confirmed"
+                              >
+                                <Clock className="w-4 h-4" />
+                                Waiting for Payment
+                              </button>
+                            </div>
+                          )}
+                          {/* Start Job - visible when Paid (and NOT PaymentPending) */}
+                          {canStartRequest(request) && Number(request.status) !== STATUS.PaymentPending && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleStartJob(request.id)}
+                                disabled={loadingStartJobId === request.id}
+                                className={`flex items-center gap-2 px-4 py-2  text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                                  style={{ opacity: 1, visibility: 'visible', backgroundColor:'#1E90FF' }}
+                              >
+                                {loadingStartJobId === request.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Check className="w-4 h-4" />
+                                )}
+                                {loadingStartJobId === request.id ? 'Starting...' : 'Start Job'}
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Complete Job - visible when InProgress / InProcess */}
+                          {canCompleteRequest(request) && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleCompleteJob(request.id)}
+                                disabled={loadingCompleteJobId === request.id}
+                                className={`flex items-center gap-2 px-4 py-2  text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                                style={{ opacity: 1, visibility: 'visible',backgroundColor:'#22c55e' }}
+                              >
+                                {loadingCompleteJobId === request.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Check className="w-4 h-4" />
+                                )}
+                                {loadingCompleteJobId === request.id ? 'Completing...' : 'Complete Job'}
                               </button>
                             </div>
                           )}
