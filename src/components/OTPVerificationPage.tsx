@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Heart, ArrowLeft, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { User } from '../App';
+import '../styles/OTPVerificationPage.css';
 
 interface OTPVerificationPageProps {
   navigate: (page: string) => void;
@@ -94,30 +95,30 @@ export function OTPVerificationPage({ navigate, userId, userRole, onVerification
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#E3F2FD] to-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="otp-page">
+      <div className="otp-container">
         <button
           onClick={() => navigate('register')}
-          className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          className="otp-back-btn"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="otp-back-icon" />
           Back to Registration
         </button>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-[#FFA726] rounded-full flex items-center justify-center">
-              <Shield className="w-8 h-8 text-white" />
+        <div className="otp-card">
+          <div className="otp-logo">
+            <div className="otp-logo-icon">
+              <Shield className="otp-shield-icon" />
             </div>
           </div>
 
-          <h2 className="text-center mb-2 text-gray-900">Verify Your Account</h2>
-          <p className="text-center text-gray-600 mb-8">
+          <h2 className="otp-title">Verify Your Account</h2>
+          <p className="otp-subtitle">
             We've sent a 6-digit verification code to your email. Please enter it below.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex gap-2 justify-center">
+          <form onSubmit={handleSubmit} className="otp-form">
+            <div className="otp-inputs-container">
               {otp.map((digit, index) => (
                 <input
                   key={index}
@@ -127,7 +128,7 @@ export function OTPVerificationPage({ navigate, userId, userRole, onVerification
                   value={digit}
                   onChange={(e) => handleOtpChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  className="w-12 h-12 text-center text-2xl font-bold border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none transition-colors"
+                  className="otp-input"
                   required
                 />
               ))}
@@ -136,29 +137,27 @@ export function OTPVerificationPage({ navigate, userId, userRole, onVerification
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors ${
-                isLoading ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
+              className={`otp-submit-btn ${isLoading ? 'otp-submit-btn-loading' : ''}`}
             >
               {isLoading ? 'Verifying...' : 'Verify OTP'}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600 text-sm">
+          <div className="otp-footer">
+            <p className="otp-footer-text">
               Didn't receive the code?{' '}
               <button
                 onClick={() => toast.info('Resend feature coming soon')}
-                className="text-[#FFA726] hover:underline"
+                className="otp-footer-link"
               >
                 Resend Code
               </button>
             </p>
           </div>
 
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-gray-600 mb-1">API Endpoint:</p>
-            <p className="text-sm text-gray-700 break-all">https://elanis.runasp.net/api/Account/verify-otp</p>
+          <div className="otp-api-info">
+            <p className="otp-api-label">API Endpoint:</p>
+            <p className="otp-api-endpoint">https://elanis.runasp.net/api/Account/verify-otp</p>
           </div>
         </div>
       </div>

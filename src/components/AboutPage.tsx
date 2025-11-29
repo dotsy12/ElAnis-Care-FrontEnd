@@ -1,5 +1,7 @@
-import { Heart, ArrowLeft, Users, Award, Shield, Target } from 'lucide-react';
+import { Heart, ArrowLeft, Users, Award, Shield, Target, Star, Clock, CheckCircle } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import CountUp from 'react-countup';
+import '../styles/AboutPage.css';
 
 interface AboutPageProps {
   navigate: (page: string) => void;
@@ -7,134 +9,331 @@ interface AboutPageProps {
 
 export function AboutPage({ navigate }: AboutPageProps) {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="about-page">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="about-header">
+        <div className="about-header-container">
           <button
             onClick={() => navigate('landing')}
-            className="flex items-center gap-2 text-gray-600 hover:text-[#FFA726] transition-colors"
+            className="back-button"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="button-icon" />
             Back to Home
           </button>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-[#E3F2FD] to-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="w-20 h-20 bg-[#FFA726] rounded-full flex items-center justify-center mx-auto mb-6">
-            <Heart className="w-10 h-10 text-white" />
+      <section className="about-hero">
+        <div className="hero-background">
+          <div className="hero-bg-circle-1"></div>
+          <div className="hero-bg-circle-2"></div>
+        </div>
+        <div className="about-hero-container">
+          <div className="about-hero-content">
+            <div className="trust-badge">
+              <div className="pulse-dot"></div>
+              <span>Trusted by 10,000+ families</span>
+            </div>
+            <div className="about-hero-icon">
+              <Heart className="icon" />
+            </div>
+            <h1 className="about-hero-title">About <span className="gradient-text">CarePro</span></h1>
+            <p className="about-hero-description">
+              We're on a mission to connect families with trusted, qualified caregivers who provide compassionate,
+              professional care services for elderly, children, and home healthcare needs.
+            </p>
+            
+            <div className="hero-features">
+              <div className="feature-item">
+                <CheckCircle className="feature-check" />
+                <span>Verified Caregivers</span>
+              </div>
+              <div className="feature-item">
+                <CheckCircle className="feature-check" />
+                <span>24/7 Support</span>
+              </div>
+              <div className="feature-item">
+                <CheckCircle className="feature-check" />
+                <span>Quality Guaranteed</span>
+              </div>
+            </div>
           </div>
-          <h1 className="mb-6 text-gray-900">About CarePro</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            We're on a mission to connect families with trusted, qualified caregivers who provide compassionate,
-            professional care services for elderly, children, and home healthcare needs.
-          </p>
         </div>
       </section>
 
       {/* Mission & Values */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-12 items-center mb-16">
-            <div>
-              <h2 className="mb-6 text-gray-900">Our Mission</h2>
-              <p className="text-lg text-gray-600 mb-4">
+      <section className="about-mission">
+        <div className="container">
+          <div className="mission-content">
+            <div className="mission-text">
+              <div className="section-badge">
+                <Target className="badge-icon" />
+                Our Mission
+              </div>
+              <h2 className="mission-title">Transforming Care Through Technology and Compassion</h2>
+              <p className="mission-description">
                 At CarePro, we believe everyone deserves access to quality, compassionate care. Our platform
                 bridges the gap between families seeking trusted caregivers and experienced professionals
                 dedicated to making a difference.
               </p>
-              <p className="text-lg text-gray-600">
+              <p className="mission-description">
                 We're committed to maintaining the highest standards of safety, reliability, and excellence
-                in all our care services.
+                in all our care services, ensuring peace of mind for families and rewarding careers for caregivers.
               </p>
+
+              <div className="mission-stats">
+                <div className="mission-stat">
+                  <div className="stat-number">
+                    <CountUp end={15} duration={3} enableScrollSpy />+
+                  </div>
+                  <div className="stat-label">Years Experience</div>
+                </div>
+                <div className="mission-stat">
+                  <div className="stat-number">
+                    <CountUp end={50} duration={3} enableScrollSpy />+
+                  </div>
+                  <div className="stat-label">Cities Covered</div>
+                </div>
+              </div>
             </div>
-            <ImageWithFallback
-              src="https://images.unsplash.com/photo-1761234852472-85aeea9c3eac?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoZWFsdGhjYXJlJTIwY2FyZWdpdmVyfGVufDF8fHx8MTc2MTQwNzMzOHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-              alt="Healthcare team"
-              className="rounded-xl shadow-lg w-full h-[400px] object-cover"
-            />
+            <div className="mission-image-container">
+              <ImageWithFallback
+                src="https://images.unsplash.com/photo-1559757175-0eb30cd8c063?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                alt="Healthcare team"
+                className="mission-image"
+              />
+              <div className="image-floating-card">
+                <div className="floating-card-content">
+                  <Award className="card-icon" />
+                  <div>
+                    <div className="card-title">Award Winning</div>
+                    <div className="card-subtitle">Best Care Platform 2024</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#E3F2FD] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-8 h-8 text-[#FFA726]" />
+          <div className="values-section">
+            <div className="section-header">
+              <div className="section-badge">
+                <Shield className="badge-icon" />
+                Our Values
               </div>
-              <h3 className="mb-2 text-gray-900">Safety First</h3>
-              <p className="text-gray-600">
-                All caregivers undergo thorough background checks and verification.
-              </p>
+              <h2 className="section-title">What Drives Us Every Day</h2>
+              <p className="section-description">Our core values shape everything we do at CarePro</p>
             </div>
 
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#E3F2FD] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Award className="w-8 h-8 text-[#FFA726]" />
+            <div className="values-grid">
+              <div className="value-card">
+                <div className="value-icon safety">
+                  <Shield className="icon" />
+                </div>
+                <h3 className="value-title">Safety First</h3>
+                <p className="value-description">
+                  All caregivers undergo thorough background checks, certification verification, and continuous monitoring.
+                </p>
+                <ul className="value-features">
+                  <li>Background Checks</li>
+                  <li>Certification Validation</li>
+                  <li>Ongoing Monitoring</li>
+                </ul>
               </div>
-              <h3 className="mb-2 text-gray-900">Excellence</h3>
-              <p className="text-gray-600">
-                We maintain high standards and continuous quality improvement.
-              </p>
-            </div>
 
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#E3F2FD] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-[#FFA726]" />
+              <div className="value-card">
+                <div className="value-icon excellence">
+                  <Award className="icon" />
+                </div>
+                <h3 className="value-title">Excellence</h3>
+                <p className="value-description">
+                  We maintain high standards through continuous training, quality assurance, and performance monitoring.
+                </p>
+                <ul className="value-features">
+                  <li>Continuous Training</li>
+                  <li>Quality Assurance</li>
+                  <li>Performance Reviews</li>
+                </ul>
               </div>
-              <h3 className="mb-2 text-gray-900">Community</h3>
-              <p className="text-gray-600">
-                Building a supportive network of caregivers and families.
-              </p>
-            </div>
 
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#E3F2FD] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Target className="w-8 h-8 text-[#FFA726]" />
+              <div className="value-card">
+                <div className="value-icon community">
+                  <Users className="icon" />
+                </div>
+                <h3 className="value-title">Community</h3>
+                <p className="value-description">
+                  Building a supportive network where caregivers and families connect, share, and grow together.
+                </p>
+                <ul className="value-features">
+                  <li>Support Network</li>
+                  <li>Knowledge Sharing</li>
+                  <li>Community Events</li>
+                </ul>
               </div>
-              <h3 className="mb-2 text-gray-900">Accessibility</h3>
-              <p className="text-gray-600">
-                Making quality care accessible and affordable for all.
-              </p>
+
+              <div className="value-card">
+                <div className="value-icon accessibility">
+                  <Target className="icon" />
+                </div>
+                <h3 className="value-title">Accessibility</h3>
+                <p className="value-description">
+                  Making quality care accessible and affordable for all through flexible plans and transparent pricing.
+                </p>
+                <ul className="value-features">
+                  <li>Flexible Plans</li>
+                  <li>Transparent Pricing</li>
+                  <li>Financial Assistance</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Stats */}
-      <section className="py-20 bg-[#E3F2FD]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-center mb-12 text-gray-900">Our Impact</h2>
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="bg-white p-8 rounded-xl text-center">
-              <p className="text-5xl mb-2 text-[#FFA726]">2,500+</p>
-              <p className="text-gray-600">Verified Caregivers</p>
+      <section className="about-stats">
+        <div className="container">
+          <div className="section-header">
+            <div className="section-badge">
+              <Star className="badge-icon" />
+              Our Impact
             </div>
-            <div className="bg-white p-8 rounded-xl text-center">
-              <p className="text-5xl mb-2 text-[#FFA726]">10,000+</p>
-              <p className="text-gray-600">Families Served</p>
+            <h2 className="section-title">Making a Difference Every Day</h2>
+            <p className="section-description">The numbers that tell our story of care and commitment</p>
+          </div>
+          
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Users className="icon" />
+              </div>
+              <p className="stat-number">
+                <CountUp end={2500} duration={3} enableScrollSpy />+
+              </p>
+              <p className="stat-label">Verified Caregivers</p>
             </div>
-            <div className="bg-white p-8 rounded-xl text-center">
-              <p className="text-5xl mb-2 text-[#FFA726]">50+</p>
-              <p className="text-gray-600">Cities Covered</p>
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Heart className="icon" />
+              </div>
+              <p className="stat-number">
+                <CountUp end={10000} duration={3} enableScrollSpy />+
+              </p>
+              <p className="stat-label">Families Served</p>
             </div>
-            <div className="bg-white p-8 rounded-xl text-center">
-              <p className="text-5xl mb-2 text-[#FFA726]">15+</p>
-              <p className="text-gray-600">Years of Service</p>
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Clock className="icon" />
+              </div>
+              <p className="stat-number">
+                <CountUp end={50} duration={3} enableScrollSpy />+
+              </p>
+              <p className="stat-label">Cities Covered</p>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Award className="icon" />
+              </div>
+              <p className="stat-number">
+                <CountUp end={15} duration={3} enableScrollSpy />+
+              </p>
+              <p className="stat-label">Years of Service</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Team Section */}
+      <section className="team-section">
+        <div className="container">
+          <div className="section-header">
+            <div className="section-badge">
+              <Users className="badge-icon" />
+              Our Team
+            </div>
+            <h2 className="section-title">Meet the People Behind CarePro</h2>
+            <p className="section-description">Passionate professionals dedicated to revolutionizing care</p>
+          </div>
+
+          <div className="team-grid">
+            <div className="team-member">
+              <div className="member-image">
+                <ImageWithFallback
+                  src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=500&q=80"
+                  alt="Dr. Sarah Johnson"
+                  className="member-photo"
+                />
+              </div>
+              <h3 className="member-name">Dr. Sarah Johnson</h3>
+              <p className="member-role">Chief Medical Officer</p>
+              <p className="member-bio">20+ years in geriatric care and healthcare innovation</p>
+            </div>
+
+            <div className="team-member">
+              <div className="member-image">
+                <ImageWithFallback
+                  src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=500&q=80"
+                  alt="Michael Chen"
+                  className="member-photo"
+                />
+              </div>
+              <h3 className="member-name">Michael Chen</h3>
+              <p className="member-role">Head of Operations</p>
+              <p className="member-bio">Former hospital administrator with 15+ years experience</p>
+            </div>
+
+            <div className="team-member">
+              <div className="member-image">
+                <ImageWithFallback
+                  src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=500&q=80"
+                  alt="Emily Rodriguez"
+                  className="member-photo"
+                />
+              </div>
+              <h3 className="member-name">Emily Rodriguez</h3>
+              <p className="member-role">Director of Care Services</p>
+              <p className="member-bio">Registered nurse with expertise in home healthcare</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="about-cta">
+        <div className="container">
+          <div className="cta-content">
+            <h2 className="cta-title">Ready to Experience the CarePro Difference?</h2>
+            <p className="cta-description">
+              Join thousands of families who trust us for their care needs. Get started today and find your perfect caregiver match.
+            </p>
+            <div className="cta-buttons">
+              <button
+                onClick={() => navigate('register')}
+                className="cta-primary-button"
+              >
+                Get Started Free
+              </button>
+              <button
+                onClick={() => navigate('contact')}
+                className="cta-secondary-button"
+              >
+                Contact Us
+              </button>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Heart className="w-6 h-6 text-[#FFA726]" />
-            <span className="text-xl">CarePro</span>
+      <footer className="about-footer">
+        <div className="container">
+          <div className="footer-content">
+            <div className="footer-logo">
+              <Heart className="logo-icon" />
+              <span className="logo-text">CarePro</span>
+            </div>
+            <p className="footer-copyright">&copy; 2025 CarePro. All rights reserved. Built with ❤️ for better care.</p>
           </div>
-          <p className="text-gray-400">&copy; 2025 CarePro. All rights reserved.</p>
         </div>
       </footer>
     </div>

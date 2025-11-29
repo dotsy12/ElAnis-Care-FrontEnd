@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Heart, Mail, Lock, ArrowLeft, Phone } from 'lucide-react';
 import { User } from '../App';
 import { toast } from 'sonner';
+import '../styles/LoginPage.css';
 
 interface LoginPageProps {
   navigate: (page: string) => void;
@@ -13,7 +14,6 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
   const [password, setPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,66 +91,66 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#E3F2FD] to-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="login-page">
+      <div className="login-container">
         <button
           onClick={() => navigate('landing')}
-          className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          className="login-back-btn"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="login-back-icon" />
           Back to Home
         </button>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-[#FFA726] rounded-full flex items-center justify-center">
-              <Heart className="w-8 h-8 text-white" />
+        <div className="login-card">
+          <div className="login-logo">
+            <div className="login-logo-icon">
+              <Heart className="login-heart-icon" />
             </div>
           </div>
 
-          <h2 className="text-center mb-2 text-gray-900">Welcome Back</h2>
-          <p className="text-center text-gray-600 mb-8">Login to your CarePro account</p>
+          <h2 className="login-title">Welcome Back</h2>
+          <p className="login-subtitle">Login to your CarePro account</p>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block mb-2 text-gray-700">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="login-input-group">
+              <label className="login-label">Email Address</label>
+              <div className="login-input-container">
+                <Mail className="login-input-icon" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none transition-colors"
+                  className="login-input"
                   placeholder="your@email.com"
                   required
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block mb-2 text-gray-700">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="login-input-group">
+              <label className="login-label">Password</label>
+              <div className="login-input-container">
+                <Lock className="login-input-icon" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none transition-colors"
+                  className="login-input"
                   placeholder="Enter your password"
                   required
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block mb-2 text-gray-700">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="login-input-group">
+              <label className="login-label">Phone Number</label>
+              <div className="login-input-container">
+                <Phone className="login-input-icon" />
                 <input
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none transition-colors"
+                  className="login-input"
                   placeholder="Enter your phone number"
                   required
                 />
@@ -160,27 +160,22 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`login-submit-btn ${isLoading ? 'login-submit-btn-loading' : ''}`}
             >
               {isLoading ? 'Logging in...' : 'Login'}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
+          <div className="login-footer">
+            <p className="login-footer-text">
               Don't have an account?{' '}
               <button
                 onClick={() => navigate('register')}
-                className="text-[#FFA726] hover:underline"
+                className="login-footer-link"
               >
                 Register here
               </button>
             </p>
-          </div>
-
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">API Endpoint:</p>
-            <p className="text-sm text-gray-700 break-all">https://elanis.runasp.net/api/Account/login</p>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, Loader2, Home, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import '../styles/PaymentSuccess.css';
 
 const API_BASE_URL = 'https://elanis.runasp.net/api';
 
@@ -44,36 +45,36 @@ export function PaymentSuccess({ navigate, sessionId: propSessionId }: PaymentSu
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#E3F2FD] flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
-          <Loader2 className="w-16 h-16 text-[#FFA726] animate-spin mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Processing Payment</h2>
-          <p className="text-gray-600">Please wait while we confirm your payment...</p>
+      <div className="payment-success-page">
+        <div className="payment-success-loading">
+          <Loader2 className="payment-success-spinner" />
+          <h2 className="payment-success-loading-title">Processing Payment</h2>
+          <p className="payment-success-loading-text">Please wait while we confirm your payment...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#E3F2FD] flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
-            <CheckCircle className="w-12 h-12 text-green-600" />
+    <div className="payment-success-page">
+      <div className="payment-success-card">
+        <div className="payment-success-content">
+          <div className="payment-success-icon">
+            <CheckCircle className="payment-success-check-icon" />
           </div>
           
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">Payment Successful!</h1>
+          <h1 className="payment-success-title">Payment Successful!</h1>
           
-          <p className="text-gray-600 mb-6">
+          <p className="payment-success-message">
             Your payment has been processed successfully. The service provider will be notified and your booking is confirmed.
           </p>
 
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-600 mb-2">Session ID</p>
-            <p className="text-xs text-gray-900 font-mono break-all">{sessionId}</p>
+          <div className="payment-success-session">
+            <p className="payment-success-session-label">Session ID</p>
+            <p className="payment-success-session-id">{sessionId}</p>
           </div>
 
-          <div className="space-y-3">
+          <div className="payment-success-actions">
             <button
               onClick={() => {
                 if (navigate) {
@@ -82,9 +83,9 @@ export function PaymentSuccess({ navigate, sessionId: propSessionId }: PaymentSu
                   window.location.href = '/';
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+              className="payment-success-requests-btn"
             >
-              <FileText className="w-5 h-5" />
+              <FileText className="payment-success-requests-icon" />
               View My Requests
             </button>
             
@@ -96,9 +97,9 @@ export function PaymentSuccess({ navigate, sessionId: propSessionId }: PaymentSu
                   window.location.href = '/';
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              className="payment-success-home-btn"
             >
-              <Home className="w-5 h-5" />
+              <Home className="payment-success-home-icon" />
               Back to Dashboard
             </button>
           </div>

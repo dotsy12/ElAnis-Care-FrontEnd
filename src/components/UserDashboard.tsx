@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { User } from '../App';
 import {
   Home, UserCircle, Users, FileText, CreditCard, Star, LogOut,
-  Search, MapPin, Clock, Filter, ChevronRight, X, Calendar, DollarSign, Loader2
+  Search, MapPin, Clock, Filter, ChevronRight, X, Calendar, DollarSign, Loader2,
+  Phone, Mail, Map, Award, Clock3, CheckCircle, AlertCircle, CalendarDays, Edit, Camera
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { toast } from 'sonner';
@@ -10,8 +11,7 @@ import ReviewForm from './reviews/ReviewForm';
 import SubmittedReview from './reviews/SubmittedReview';
 import { fetchReviewByRequest, fetchUserReviews, Review } from '../api/reviews';
 import { Badge } from './ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import '../styles/UserDashboard.css';
 
 interface UserDashboardProps {
   user: User | null;
@@ -132,13 +132,26 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
   const [loadingFetchedReview, setLoadingFetchedReview] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  // Ratings (loaded from API)
   const [myRatings, setMyRatings] = useState<Review[]>([]);
   const [loadingRatings, setLoadingRatings] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [currentAvatar, setCurrentAvatar] = useState(user?.avatar);
+
+  // Profile form state
+  const [profileName, setProfileName] = useState(user?.name || '');
+  const [profilePhone, setProfilePhone] = useState(user?.phone || '');
+  const [profileAddress, setProfileAddress] = useState(user?.address || '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  useEffect(() => {
+    setCurrentAvatar(user?.avatar);
+    setProfileName(user?.name || '');
+    setProfilePhone(user?.phone || '');
+    setProfileAddress(user?.address || '');
+  }, [user]);
 
   useEffect(() => {
     fetchCategories();
-    // Fetch user requests on initial load for dashboard stats
     fetchUserRequests();
   }, []);
 
@@ -150,12 +163,10 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
     }
   }, [activeTab, currentPage]);
 
-  // Load the existing review for a selected request if it's completed
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       if (!selectedRequestForRating) return setFetchedReview(null);
-      // Only fetch review when request is completed
       if (Number(selectedRequestForRating.status) !== 6) {
         setFetchedReview(null);
         return;
@@ -181,7 +192,6 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
     return () => { mounted = false; };
   }, [selectedRequestForRating]);
 
-  // Load user ratings when the Ratings tab is active
   useEffect(() => {
     let mounted = true;
     if (activeTab !== 'ratings') return;
@@ -195,7 +205,6 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
           setMyRatings(res.data || []);
         } else {
           setMyRatings([]);
-          // Only show an error if message exists
           if (res?.message) toast.error(res.message);
         }
       } catch (err) {
@@ -363,7 +372,6 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
         setBookingGovernorate('');
         setBookingDescription('');
         setActiveTab('requests');
-        // Refresh requests list
         fetchUserRequests();
       } else {
         toast.error(result.message || 'Failed to send request');
@@ -401,7 +409,6 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
       const result = await response.json();
 
       if (result.succeeded && result.data?.checkoutUrl) {
-        // Redirect to Stripe Checkout
         window.location.href = result.data.checkoutUrl;
       } else {
         toast.error(result.message || 'Failed to create payment session');
@@ -416,281 +423,537 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
 
   const handleRating = () => {
     if (!selectedRequestForRating) return;
-
-    // TODO: Implement actual rating API call
     toast.success('Thank you for your rating!');
     setShowRatingDialog(false);
     setSelectedRequestForRating(null);
   };
 
-const statusStyles = {
-  1: { backgroundColor: '#F3F4F6', color: '#111827' },
-  2: { backgroundColor: '#3B82F6', color: '#FFFFFF' },
-  3: { backgroundColor: '#EF4444', color: '#FFFFFF' },
-  4: { backgroundColor: '#10B981', color: '#FFFFFF' },
-  5: { backgroundColor: '#F59E0B', color: '#111827' },
-  6: { backgroundColor: '#8B5CF6', color: '#FFFFFF' },
-  7: { backgroundColor: '#F97316', color: '#FFFFFF' },
-  8: { backgroundColor: '#EC4899', color: '#FFFFFF' },
-};
-
-const getStatusBadge = (status: number, statusName: string) => {
-  const style = statusStyles[status] || {
-    backgroundColor: '#E5E7EB',
-    color: '#111827',
+  const statusStyles = {
+    1: { backgroundColor: '#f3f4f6', color: '#374151', icon: <Clock3 className="status-icon" /> },
+    2: { backgroundColor: '#dbeafe', color: '#1e40af', icon: <Clock className="status-icon" /> },
+    3: { backgroundColor: '#fef3c7', color: '#92400e', icon: <AlertCircle className="status-icon" /> },
+    4: { backgroundColor: '#dcfce7', color: '#166534', icon: <CheckCircle className="status-icon" /> },
+    5: { backgroundColor: '#ecfdf5', color: '#047857', icon: <Award className="status-icon" /> },
+    6: { backgroundColor: '#faf5ff', color: '#7c3aed', icon: <CheckCircle className="status-icon" /> },
+    7: { backgroundColor: '#fef2f2', color: '#dc2626', icon: <AlertCircle className="status-icon" /> },
+    8: { backgroundColor: '#fef2f2', color: '#dc2626', icon: <AlertCircle className="status-icon" /> },
   };
 
-  return (
-    <Badge
-      style={{
-        ...style,
-        padding: "4px 8px",
-        borderRadius: "6px",
-        fontSize: "12px",
-        fontWeight: 600,
-      }}
-    >
-      {statusName}
-    </Badge>
-  );
-};
+  const getStatusBadge = (status: number, statusName: string) => {
+    const style = statusStyles[status] || {
+      backgroundColor: '#f3f4f6',
+      color: '#374151',
+      icon: <AlertCircle className="status-icon" />
+    };
+
+    return (
+      <div className="status-badge" style={{ backgroundColor: style.backgroundColor, color: style.color }}>
+        {style.icon}
+        <span>{statusName}</span>
+      </div>
+    );
+  };
+
   const handleSearch = () => {
     setCurrentPage(1);
     fetchProviders();
   };
 
+  const getStatusCounts = () => {
+    return {
+      total: myRequests.length,
+      pending: myRequests.filter(r => r.status === 1).length,
+      accepted: myRequests.filter(r => r.status === 2).length,
+      completed: myRequests.filter(r => r.status === 6).length,
+      cancelled: myRequests.filter(r => r.status === 7 || r.status === 8).length,
+    };
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (e.g., max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Please login to update profile picture');
+      return;
+    }
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/User/profile-picture`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success('Profile picture updated successfully');
+
+        // Update local state to show new image immediately
+        const newAvatarUrl = URL.createObjectURL(file);
+        setCurrentAvatar(newAvatarUrl);
+
+        // Update localStorage to persist changes on reload
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          // If the backend returns the new URL, use it. Otherwise, we can't really persist the blob URL.
+          // However, typically the backend SHOULD return the new URL.
+          // Let's assume result.data contains the URL if it's a string, or we might need to fetch the profile again.
+          // For now, if result.data is the URL:
+          if (result.data && typeof result.data === 'string') {
+            parsedUser.avatar = result.data;
+            localStorage.setItem('currentUser', JSON.stringify(parsedUser));
+            setCurrentAvatar(result.data); // Use the real URL
+          } else {
+            // If backend doesn't return URL, we should probably fetch the profile to get it.
+            // But for now, let's try to fetch the profile to be sure.
+            // Or just warn the user if we can't persist.
+            // Actually, let's try to fetch the updated profile.
+            fetchUserProfile();
+          }
+        }
+      } else {
+        toast.error(result.message || 'Failed to update profile picture');
+      }
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      toast.error('Failed to upload profile picture');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/User/profile`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      const result = await response.json();
+      if (response.ok && result.succeeded && result.data) {
+        const updatedUser = result.data;
+        // Update localStorage
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          const mergedUser = { ...parsedUser, ...updatedUser };
+          // Ensure avatar is mapped correctly if the API returns 'profilePicture' instead of 'avatar'
+          if (updatedUser.profilePicture) mergedUser.avatar = updatedUser.profilePicture;
+
+          localStorage.setItem('currentUser', JSON.stringify(mergedUser));
+
+          // Update local state
+          if (updatedUser.profilePicture) setCurrentAvatar(updatedUser.profilePicture);
+          if (updatedUser.name) setProfileName(updatedUser.name);
+          if (updatedUser.phoneNumber) setProfilePhone(updatedUser.phoneNumber);
+          if (updatedUser.address) setProfileAddress(updatedUser.address);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Please login to save changes');
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/User/profile`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: profileName.split(' ')[0], // Simple split, backend might expect separate fields
+          lastName: profileName.split(' ').slice(1).join(' ') || '',
+          phoneNumber: profilePhone,
+          address: profileAddress,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.succeeded) {
+        toast.success('Profile updated successfully');
+        // Update localStorage
+        fetchUserProfile(); // Fetch fresh data to ensure consistency
+      } else {
+        toast.error(result.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#E3F2FD]">
+    <div className="user-dashboard">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h2 className="text-gray-900">CarePro</h2>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
+      <header className="dashboard-header">
+        <div className="header-container">
+          <div className="header-brand">
+            <div className="brand-logo">
+              <span className="logo-text">CarePro</span>
+            </div>
+          </div>
+          <div className="header-user">
+            <div className="user-info">
               <ImageWithFallback
                 src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User'}
                 alt={user?.name || 'User'}
-                className="w-10 h-10 rounded-full"
+                className="user-avatar"
               />
-              <div>
-                <p className="text-gray-900">Welcome, {user?.name}</p>
-                <p className="text-sm text-gray-500">{user?.email}</p>
+              <div className="user-details">
+                <p className="user-name">Welcome, {user?.name}</p>
+                <p className="user-email">{user?.email}</p>
               </div>
             </div>
             <button
               onClick={onLogout}
-              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="logout-button"
               title="Logout"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="logout-icon" />
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid md:grid-cols-4 gap-6">
+      <div className="dashboard-container">
+        <div className="dashboard-layout">
           {/* Sidebar */}
-          <div className="md:col-span-1">
-            <div className="bg-white rounded-xl shadow-md p-4 space-y-2">
+          <div className="dashboard-sidebar">
+            <div className="sidebar-menu">
               <button
                 onClick={() => setActiveTab('home')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'home' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`menu-item ${activeTab === 'home' ? 'menu-item-active' : ''}`}
               >
-                <Home className="w-5 h-5" />
-                <span>Home</span>
+                <Home className="menu-icon" />
+                <span>Dashboard</span>
               </button>
               <button
                 onClick={() => setActiveTab('profile')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'profile' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`menu-item ${activeTab === 'profile' ? 'menu-item-active' : ''}`}
               >
-                <UserCircle className="w-5 h-5" />
+                <UserCircle className="menu-icon" />
                 <span>My Profile</span>
               </button>
               <button
                 onClick={() => setActiveTab('caregivers')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'caregivers' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`menu-item ${activeTab === 'caregivers' ? 'menu-item-active' : ''}`}
               >
-                <Users className="w-5 h-5" />
+                <Users className="menu-icon" />
                 <span>Caregivers</span>
               </button>
               <button
                 onClick={() => setActiveTab('requests')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'requests' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`menu-item ${activeTab === 'requests' ? 'menu-item-active' : ''}`}
               >
-                <FileText className="w-5 h-5" />
+                <FileText className="menu-icon" />
                 <span>My Requests</span>
               </button>
               <button
                 onClick={() => setActiveTab('payments')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'payments' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`menu-item ${activeTab === 'payments' ? 'menu-item-active' : ''}`}
               >
-                <CreditCard className="w-5 h-5" />
+                <CreditCard className="menu-icon" />
                 <span>Payments</span>
               </button>
               <button
                 onClick={() => setActiveTab('ratings')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'ratings' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`menu-item ${activeTab === 'ratings' ? 'menu-item-active' : ''}`}
               >
-                <Star className="w-5 h-5" />
+                <Star className="menu-icon" />
                 <span>Ratings</span>
               </button>
             </div>
           </div>
 
           {/* Main Content */}
-          <div className="md:col-span-3">
+          <div className="dashboard-content">
             {activeTab === 'home' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-4 text-gray-900">Dashboard Overview</h3>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div className="bg-[#E3F2FD] p-4 rounded-lg">
-                      <p className="text-gray-600 mb-1">Total Requests</p>
-                      <p className="text-3xl text-gray-900">{myRequests.length}</p>
+              <div className="dashboard-overview">
+                <div className="welcome-card">
+                  <div className="welcome-content">
+                    <h3 className="welcome-title">Welcome back, {user?.name}!</h3>
+                    <p className="welcome-subtitle">Here's what's happening with your care requests today.</p>
+                  </div>
+                  <div className="welcome-stats">
+                    <div className="stat-item">
+                      <div className="stat-icon total">
+                        <FileText className="icon" />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">{getStatusCounts().total}</span>
+                        <span className="stat-label">Total Requests</span>
+                      </div>
                     </div>
-                    <div className="bg-[#E3F2FD] p-4 rounded-lg">
-                      <p className="text-gray-600 mb-1">Completed</p>
-                      <p className="text-3xl text-gray-900">
-                        {myRequests.filter(r => r.status === 5).length}
-                      </p>
+                    <div className="stat-item">
+                      <div className="stat-icon pending">
+                        <Clock3 className="icon" />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">{getStatusCounts().pending}</span>
+                        <span className="stat-label">Pending</span>
+                      </div>
                     </div>
-                    <div className="bg-[#E3F2FD] p-4 rounded-lg">
-                      <p className="text-gray-600 mb-1">Pending</p>
-                      <p className="text-3xl text-gray-900">
-                        {myRequests.filter(r => r.status === 1).length}
-                      </p>
+                    <div className="stat-item">
+                      <div className="stat-icon completed">
+                        <CheckCircle className="icon" />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">{getStatusCounts().completed}</span>
+                        <span className="stat-label">Completed</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-4 text-gray-900">Quick Actions</h3>
-                  <div className="grid md:grid-cols-2 gap-4">
+                <div className="quick-actions-card">
+                  <h3 className="card-title">Quick Actions</h3>
+                  <div className="actions-grid">
                     <button
                       onClick={() => setActiveTab('caregivers')}
-                      className="p-4 border-2 border-[#FFA726] text-[#FFA726] rounded-lg hover:bg-[#FFA726] hover:text-white transition-all"
+                      className="action-card primary"
                     >
-                      Find a Caregiver
+                      <Users className="action-icon" />
+                      <span className="action-title">Find a Caregiver</span>
+                      <span className="action-description">Browse and book qualified caregivers</span>
                     </button>
                     <button
                       onClick={() => setActiveTab('requests')}
-                      className="p-4 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-[#FFA726] hover:text-[#FFA726] transition-all"
+                      className="action-card secondary"
                     >
-                      View My Requests
+                      <FileText className="action-icon" />
+                      <span className="action-title">View My Requests</span>
+                      <span className="action-description">Check status of your bookings</span>
                     </button>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-4 text-gray-900">Recent Activity</h3>
-                  {myRequests.slice(0, 3).map(request => (
-                    <div key={request.id} className="flex items-center gap-4 p-3 border-b last:border-b-0">
-                      <ImageWithFallback
-                        src={request.providerAvatar}
-                        alt={request.providerName}
-                        className="w-12 h-12 rounded-full"
-                      />
-                      <div className="flex-1">
-                        <p className="text-gray-900">{request.providerName}</p>
-                        <p className="text-sm text-gray-500">{new Date(request.preferredDate).toLocaleString()}</p>
+                <div className="recent-activity-card">
+                  <div className="card-header">
+                    <h3 className="card-title">Recent Activity</h3>
+                    <button
+                      onClick={() => setActiveTab('requests')}
+                      className="view-all-button"
+                    >
+                      View All
+                    </button>
+                  </div>
+                  <div className="activity-list">
+                    {myRequests.slice(0, 5).map(request => (
+                      <div key={request.id} className="activity-item">
+                        <ImageWithFallback
+                          src={request.providerAvatar}
+                          alt={request.providerName}
+                          className="activity-avatar"
+                        />
+                        <div className="activity-content">
+                          <p className="activity-title">Request with {request.providerName}</p>
+                          <p className="activity-date">{new Date(request.preferredDate).toLocaleDateString()}</p>
+                        </div>
+                        {getStatusBadge(request.status, request.statusName)}
                       </div>
-                      {getStatusBadge(request.status, request.statusName)}
-                    </div>
-                  ))}
-                  {myRequests.length === 0 && (
-                    <p className="text-center text-gray-500 py-4">No recent activity</p>
-                  )}
+                    ))}
+                    {myRequests.length === 0 && (
+                      <div className="empty-state">
+                        <FileText className="empty-icon" />
+                        <p className="empty-text">No recent activity</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
 
             {activeTab === 'profile' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="mb-6 text-gray-900">My Profile</h3>
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <ImageWithFallback
-                      src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User'}
-                      alt={user?.name || 'User'}
-                      className="w-20 h-20 rounded-full"
-                    />
-                    <div>
-                      <h4 className="text-gray-900">{user?.name}</h4>
-                      <p className="text-gray-600">{user?.email}</p>
+              <div className="profile-card">
+                <h3 className="card-title">My Profile</h3>
+                <div className="profile-content">
+                  <div className="profile-header">
+                    <div className="profile-avatar-container" style={{ position: 'relative', display: 'inline-block' }}>
+                      <ImageWithFallback
+                        src={currentAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=User'}
+                        alt={user?.name || 'User'}
+                        className="profile-avatar"
+                      />
+                      <label
+                        htmlFor="profile-upload"
+                        className="profile-upload-button"
+                        style={{
+                          position: 'absolute',
+                          bottom: '0',
+                          right: '0',
+                          backgroundColor: '#f97316', // Orange-500
+                          color: 'white',
+                          borderRadius: '50%',
+                          padding: '8px',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'background-color 0.2s'
+                        }}
+                        title="Change Profile Picture"
+                      >
+                        {isUploading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" size={16} />
+                        ) : (
+                          <Edit className="w-4 h-4" size={16} />
+                        )}
+                        <input
+                          id="profile-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          style={{ display: 'none' }}
+                          disabled={isUploading}
+                        />
+                      </label>
+                    </div>
+                    <div className="profile-info">
+                      <h4 className="profile-name">{user?.name}</h4>
+                      <p className="profile-email">{user?.email}</p>
+                      <div className="profile-badge">Verified User</div>
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-gray-700 mb-2">Phone Number</label>
-                      <input
-                        type="tel"
-                        defaultValue={user?.phone}
-                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                      />
+                  <div className="profile-form">
+                    <div className="form-grid">
+                      <div className="form-field">
+                        <label className="field-label">
+                          <UserCircle className="field-icon" />
+                          Full Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profileName}
+                          onChange={(e) => setProfileName(e.target.value)}
+                          className="form-input"
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label className="field-label">
+                          <Mail className="field-icon" />
+                          Email Address
+                        </label>
+                        <input
+                          type="email"
+                          defaultValue={user?.email}
+                          className="form-input"
+                          disabled
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label className="field-label">
+                          <Phone className="field-icon" />
+                          Phone Number
+                        </label>
+                        <input
+                          type="tel"
+                          value={profilePhone}
+                          onChange={(e) => setProfilePhone(e.target.value)}
+                          className="form-input"
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label className="field-label">
+                          <Map className="field-icon" />
+                          Address
+                        </label>
+                        <input
+                          type="text"
+                          value={profileAddress}
+                          onChange={(e) => setProfileAddress(e.target.value)}
+                          className="form-input"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-gray-700 mb-2">Address</label>
-                      <input
-                        type="text"
-                        defaultValue={user?.address}
-                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                      />
-                    </div>
+                    <button
+                      className="save-button"
+                      onClick={handleSaveChanges}
+                      disabled={isSavingProfile}
+                    >
+                      {isSavingProfile ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </button>
                   </div>
-
-                  <button className="px-6 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors">
-                    Save Changes
-                  </button>
                 </div>
               </div>
             )}
 
             {activeTab === 'caregivers' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-4 text-gray-900">Find Caregivers</h3>
-                  <div className="grid md:grid-cols-3 gap-4 mb-4">
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <div className="caregivers-section">
+                <div className="search-card">
+                  <h3 className="card-title">Find Caregivers</h3>
+                  <div className="search-grid">
+                    <div className="search-field">
+                      <MapPin className="search-icon" />
                       <input
                         type="text"
                         placeholder="Governorate..."
                         value={searchGovernorate}
                         onChange={(e) => setSearchGovernorate(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                        className="search-input"
                       />
                     </div>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <div className="search-field">
+                      <MapPin className="search-icon" />
                       <input
                         type="text"
                         placeholder="City..."
                         value={searchCity}
                         onChange={(e) => setSearchCity(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                        className="search-input"
                       />
                     </div>
-                    <div className="relative">
-                      <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <div className="search-field">
+                      <Filter className="search-icon" />
                       <select
                         value={selectedCategoryFilter}
                         onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none appearance-none bg-white"
+                        className="search-select"
                       >
                         <option value="">All Categories</option>
                         {categories.map(cat => (
@@ -699,69 +962,74 @@ const getStatusBadge = (status: number, statusName: string) => {
                       </select>
                     </div>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <div className="search-actions">
+                    <div className="search-field full-width">
+                      <Search className="search-icon" />
                       <input
                         type="text"
-                        placeholder="Search by name..."
+                        placeholder="Search by name, specialty..."
                         value={searchService}
                         onChange={(e) => setSearchService(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                        className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                        className="search-input"
                       />
                     </div>
-                    <button 
+                    <button
                       onClick={handleSearch}
                       disabled={loading}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50">
-                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                      className="search-button"
+                    >
+                      {loading ? <Loader2 className="button-loader" /> : <Search className="button-icon" />}
                       Search
                     </button>
                   </div>
                 </div>
 
                 {loading ? (
-                  <div className="flex justify-center items-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#FFA726]" />
+                  <div className="loading-container">
+                    <Loader2 className="loading-spinner" />
+                    <p className="loading-text">Finding the best caregivers...</p>
                   </div>
                 ) : (
                   <>
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="providers-grid">
                       {providers.map(provider => (
-                        <div key={provider.id} className="bg-white rounded-xl shadow-md p-6">
-                          <div className="flex items-start gap-4 mb-4">
+                        <div key={provider.id} className="provider-card">
+                          <div className="provider-header">
                             <ImageWithFallback
                               src={provider.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + provider.fullName}
                               alt={provider.fullName}
-                              className="w-16 h-16 rounded-full"
+                              className="provider-avatar"
                             />
-                            <div className="flex-1">
-                              <h4 className="text-gray-900">{provider.fullName}</h4>
-                              <p className="text-sm text-gray-600">{provider.categories.map(c => c.name).join(', ')}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <div className="flex items-center gap-1">
-                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                  <span className="text-sm">{provider.averageRating.toFixed(1)}</span>
+                            <div className="provider-info">
+                              <h4 className="provider-name">{provider.fullName}</h4>
+                              <p className="provider-categories">{provider.categories.map(c => c.name).join(', ')}</p>
+                              <div className="provider-rating">
+                                <div className="rating-stars">
+                                  {Array.from({ length: 5 }).map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`star-icon ${i < Math.floor(provider.averageRating) ? 'star-filled' : 'star-empty'
+                                        }`}
+                                    />
+                                  ))}
                                 </div>
-                                {provider.totalReviews !== undefined && (
-                                  <span className="text-sm text-gray-500">({provider.totalReviews} reviews)</span>
-                                )}
+                                <span className="rating-text">
+                                  {provider.averageRating.toFixed(1)} ({provider.totalReviews || 0} reviews)
+                                </span>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-gray-900">${provider.hourlyRate}/hr</p>
+                            <div className="provider-meta">
+                              <div className="provider-rate">${provider.hourlyRate}/hr</div>
                               {provider.isAvailable && (
-                                <Badge variant="default" className="mt-1">Available</Badge>
+                                <div className="availability-badge">Available</div>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                          <div className="provider-location">
+                            <MapPin className="location-icon" />
                             {provider.location && (
-                              <div className="flex items-center gap-1">
-                                <MapPin className="w-4 h-4" />
-                                {provider.location.city}, {provider.location.governorate}
-                              </div>
+                              <span>{provider.location.city}, {provider.location.governorate}</span>
                             )}
                           </div>
                           <button
@@ -769,7 +1037,7 @@ const getStatusBadge = (status: number, statusName: string) => {
                               setSelectedProvider(provider);
                               await fetchProviderDetails(provider.id);
                             }}
-                            className="w-full py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+                            className="view-profile-button"
                           >
                             View Profile
                           </button>
@@ -777,26 +1045,28 @@ const getStatusBadge = (status: number, statusName: string) => {
                       ))}
                     </div>
                     {providers.length === 0 && !loading && (
-                      <div className="text-center py-12">
-                        <p className="text-gray-500">No providers found. Try adjusting your search filters.</p>
+                      <div className="empty-results">
+                        <Users className="empty-icon" />
+                        <p className="empty-title">No providers found</p>
+                        <p className="empty-description">Try adjusting your search filters or search in a different area.</p>
                       </div>
                     )}
                     {totalPages > 1 && (
-                      <div className="flex justify-center gap-2 mt-6">
+                      <div className="pagination">
                         <button
                           onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                           disabled={currentPage === 1 || loading}
-                          className="px-4 py-2 border-2 border-[#FFA726] text-[#FFA726] rounded-lg hover:bg-[#FFA726] hover:text-white disabled:opacity-50 transition-colors"
+                          className="pagination-button prev"
                         >
                           Previous
                         </button>
-                        <span className="px-4 py-2 text-gray-700">
+                        <span className="pagination-info">
                           Page {currentPage} of {totalPages}
                         </span>
                         <button
                           onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                           disabled={currentPage === totalPages || loading}
-                          className="px-4 py-2 border-2 border-[#FFA726] text-[#FFA726] rounded-lg hover:bg-[#FFA726] hover:text-white disabled:opacity-50 transition-colors"
+                          className="pagination-button next"
                         >
                           Next
                         </button>
@@ -808,102 +1078,123 @@ const getStatusBadge = (status: number, statusName: string) => {
             )}
 
             {activeTab === 'requests' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-gray-900">My Requests</h3>
+              <div className="requests-card">
+                <div className="card-header">
+                  <h3 className="card-title">My Requests</h3>
                   <button
                     onClick={fetchUserRequests}
                     disabled={loadingRequests}
-                    className="px-4 py-2 text-sm bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 flex items-center gap-2"
+                    className="refresh-button"
                   >
-                    {loadingRequests ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    {loadingRequests ? <Loader2 className="button-loader" /> : null}
                     Refresh
                   </button>
                 </div>
                 {loadingRequests ? (
-                  <div className="flex justify-center items-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#FFA726]" />
+                  <div className="loading-container">
+                    <Loader2 className="loading-spinner" />
+                    <p className="loading-text">Loading your requests...</p>
                   </div>
                 ) : (
-                  <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                  {myRequests.map(request => (
-                    <div key={request.id} className="border-2 border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start gap-4">
-                        <ImageWithFallback
-                          src={request.providerAvatar}
-                          alt={request.providerName}
-                          className="w-16 h-16 rounded-full"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-gray-900">{request.providerName}</h4>
-                            {getStatusBadge(request.status, request.statusName)}
+                  <div className="requests-list">
+                    {myRequests.map(request => (
+                      <div key={request.id} className="request-card">
+                        <div className="request-header">
+                          <div className="request-provider">
+                            <ImageWithFallback
+                              src={request.providerAvatar}
+                              alt={request.providerName}
+                              className="provider-avatar"
+                            />
+                            <div className="provider-details">
+                              <h4 className="provider-name">{request.providerName}</h4>
+                              <p className="service-category">{request.categoryName}</p>
+                            </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
-                            <p>Date: {new Date(request.preferredDate).toLocaleDateString()}</p>
-                            <p>Time: {new Date(request.preferredDate).toLocaleTimeString()}</p>
-                            <p>Shift: {request.shiftTypeName}</p>
-                            <p>Price: ${request.totalPrice}</p>
-                            <p>Category: {request.categoryName}</p>
-                            <p>Address: {request.address}</p>
+                          {getStatusBadge(request.status, request.statusName)}
+                        </div>
+                        <div className="request-details">
+                          <div className="detail-grid">
+                            <div className="detail-item">
+                              <CalendarDays className="detail-icon" />
+                              <span>{new Date(request.preferredDate).toLocaleDateString()}</span>
+                            </div>
+                            <div className="detail-item">
+                              <Clock className="detail-icon" />
+                              <span>{new Date(request.preferredDate).toLocaleTimeString()}</span>
+                            </div>
+                            <div className="detail-item">
+                              <Clock3 className="detail-icon" />
+                              <span>{request.shiftTypeName}</span>
+                            </div>
+                            <div className="detail-item">
+                              <DollarSign className="detail-icon" />
+                              <span>${request.totalPrice}</span>
+                            </div>
                           </div>
                           {request.description && (
-                            <div className="bg-gray-50 border border-gray-200 rounded p-2 mb-2">
-                              <p className="text-sm text-gray-700">
-                                <strong>Description:</strong> {request.description}
-                              </p>
+                            <div className="request-description">
+                              <p className="description-text">{request.description}</p>
                             </div>
                           )}
                           {request.rejectionReason && (
-                            <div className="bg-red-50 border border-red-200 rounded p-2 mb-2">
-                              <p className="text-sm text-red-800">
-                                <strong>Rejection Reason:</strong> {request.rejectionReason}
-                              </p>
+                            <div className="rejection-notice">
+                              <AlertCircle className="rejection-icon" />
+                              <p className="rejection-text">{request.rejectionReason}</p>
                             </div>
                           )}
-                          <div className="flex gap-2">
-                            {request.canPay && (
-                              <button
-                                onClick={() => {
-                                  setSelectedRequestForPayment(request);
-                                  setShowPaymentDialog(true);
-                                }}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                              >
-                                Pay Now
-                              </button>
-                            )}
-                            {request.status === 6 && (
-                              <button
-                                onClick={() => {
-                                  setSelectedRequestForRating(request);
-                                  setShowRatingDialog(true);
-                                }}
-                                className="px-4 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-                              >
-                                Rate Service
-                              </button>
-                            )}
-                            {request.rating && (
-                              <div className="flex items-center gap-1 text-sm">
-                                <span className="text-gray-600">Your rating:</span>
+                        </div>
+                        <div className="request-actions">
+                          {request.canPay && (
+                            <button
+                              onClick={() => {
+                                setSelectedRequestForPayment(request);
+                                setShowPaymentDialog(true);
+                              }}
+                              className="action-button primary"
+                            >
+                              Pay Now
+                            </button>
+                          )}
+                          {request.status === 6 && (
+                            <button
+                              onClick={() => {
+                                setSelectedRequestForRating(request);
+                                setShowRatingDialog(true);
+                              }}
+                              className="action-button secondary"
+                            >
+                              Rate Service
+                            </button>
+                          )}
+                          {request.rating && (
+                            <div className="user-rating">
+                              <span className="rating-label">Your rating:</span>
+                              <div className="rating-stars">
                                 {Array.from({ length: 5 }).map((_, i) => (
                                   <Star
                                     key={i}
-                                    className={`w-4 h-4 ${
-                                      i < request.rating! ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                                    }`}
+                                    className={`star-icon ${i < request.rating! ? 'star-filled' : 'star-empty'}`}
                                   />
                                 ))}
                               </div>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                     {myRequests.length === 0 && (
-                      <p className="text-center text-gray-500 py-8">No requests yet</p>
+                      <div className="empty-state">
+                        <FileText className="empty-icon" />
+                        <p className="empty-title">No requests yet</p>
+                        <p className="empty-description">Start by finding a caregiver and sending your first request.</p>
+                        <button
+                          onClick={() => setActiveTab('caregivers')}
+                          className="empty-action"
+                        >
+                          Find Caregivers
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -911,69 +1202,81 @@ const getStatusBadge = (status: number, statusName: string) => {
             )}
 
             {activeTab === 'payments' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="mb-6 text-gray-900">Payment History</h3>
-                <div className="space-y-3">
+              <div className="payments-card">
+                <h3 className="card-title">Payment History</h3>
+                <div className="payments-list">
                   {myRequests
-                    .filter(r => r.status === 3 || r.status === 4 || r.status === 5)
+                    .filter(r => r.status === 3 || r.status === 4 || r.status === 5 || r.status === 6)
                     .map(request => (
-                      <div key={request.id} className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                            <CreditCard className="w-5 h-5 text-green-600" />
-                          </div>
-                          <div>
-                            <p className="text-gray-900">{request.providerName}</p>
-                            <p className="text-sm text-gray-500">{new Date(request.preferredDate).toLocaleDateString()}</p>
-                          </div>
+                      <div key={request.id} className="payment-item">
+                        <div className="payment-icon">
+                          <CreditCard className="icon" />
                         </div>
-                        <p className="text-gray-900">${request.totalPrice}</p>
+                        <div className="payment-details">
+                          <p className="payment-service">{request.categoryName}</p>
+                          <p className="payment-provider">{request.providerName}</p>
+                          <p className="payment-date">{new Date(request.preferredDate).toLocaleDateString()}</p>
+                        </div>
+                        <div className="payment-amount">${request.totalPrice}</div>
                       </div>
                     ))}
-                  {myRequests.filter(r => r.status === 3 || r.status === 4 || r.status === 5).length === 0 && (
-                    <p className="text-center text-gray-500 py-8">No payment history</p>
+                  {myRequests.filter(r => r.status === 3 || r.status === 4 || r.status === 5 || r.status === 6).length === 0 && (
+                    <div className="empty-state">
+                      <CreditCard className="empty-icon" />
+                      <p className="empty-title">No payment history</p>
+                      <p className="empty-description">Your completed payments will appear here.</p>
+                    </div>
                   )}
                 </div>
               </div>
             )}
 
             {activeTab === 'ratings' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="mb-6 text-gray-900">My Ratings</h3>
-                <div>
+              <div className="ratings-card">
+                <h3 className="card-title">My Ratings</h3>
+                <div className="ratings-content">
                   {loadingRatings ? (
-                    <div className="flex justify-center items-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-[#FFA726]" />
+                    <div className="loading-container">
+                      <Loader2 className="loading-spinner" />
+                      <p className="loading-text">Loading your ratings...</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="ratings-list">
                       {myRatings.length > 0 ? (
                         myRatings.map((rev) => (
-                          <div key={rev.id} className="border-2 border-gray-200 rounded-lg p-4">
-                            <div className="flex items-center gap-4 mb-3">
+                          <div key={rev.id} className="rating-item">
+                            <div className="rating-header">
                               <ImageWithFallback
                                 src={rev.clientAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(rev.clientName)}
                                 alt={rev.clientName}
-                                className="w-12 h-12 rounded-full"
+                                className="rating-avatar"
                               />
-                              <div className="flex-1">
-                                <p className="text-gray-900">{rev.providerName || rev.clientName}</p>
-                                <p className="text-sm text-gray-500">{new Date(rev.createdAt).toLocaleDateString()}</p>
+                              <div className="rating-info">
+                                <p className="rating-name">{rev.providerName || rev.clientName}</p>
+                                <p className="rating-date">{new Date(rev.createdAt).toLocaleDateString()}</p>
                               </div>
-                              <div className="flex items-center gap-1">
+                              <div className="rating-stars">
                                 {Array.from({ length: 5 }).map((_, i) => (
                                   <Star
                                     key={i}
-                                    className={`w-5 h-5 ${i < rev.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                    className={`star-icon ${i < rev.rating ? 'star-filled' : 'star-empty'}`}
                                   />
                                 ))}
                               </div>
                             </div>
-                            {rev.comment && <p className="text-gray-700">{rev.comment}</p>}
+                            {rev.comment && (
+                              <div className="rating-comment">
+                                <p className="comment-text">{rev.comment}</p>
+                              </div>
+                            )}
                           </div>
                         ))
                       ) : (
-                        <p className="text-center text-gray-500 py-8">No ratings yet</p>
+                        <div className="empty-state">
+                          <Star className="empty-icon" />
+                          <p className="empty-title">No ratings yet</p>
+                          <p className="empty-description">Your ratings for completed services will appear here.</p>
+                        </div>
                       )}
                     </div>
                   )}
@@ -984,405 +1287,396 @@ const getStatusBadge = (status: number, statusName: string) => {
         </div>
       </div>
 
- {/* Provider Profile Dialog */}
-<Dialog
-  open={!!selectedProvider && !showBookingDialog}
-  onOpenChange={() => {
-    setSelectedProvider(null);
-    setSelectedProviderDetails(null);
-  }}
->
-  <DialogContent
-    className="max-w-2xl max-h-[95vh] flex flex-col p-0" // ✅ شلنا overflow-hidden وضبطنا max-height
-  >
-    {selectedProviderDetails && (
-      <>
-        {/* الهيدر */}
-        <DialogHeader className="px-6 pt-6 pb-2">
-          <DialogTitle>Provider Profile</DialogTitle>
-          <DialogDescription>
-            View detailed information about this provider
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* منطقة التمرير */}
-        <div
-          className="space-y-6 overflow-y-auto px-6 pb-6"
-          style={{
-            maxHeight: "calc(95vh - 140px)", // ✅ زي البوكينج بالضبط
-            overflowY: "auto",
-          }}
-        >
-          <div className="flex items-start gap-4">
-            <ImageWithFallback
-              src={
-                selectedProviderDetails.avatarUrl ||
-                "https://api.dicebear.com/7.x/avataaars/svg?seed=" +
-                  selectedProviderDetails.fullName
-              }
-              alt={selectedProviderDetails.fullName}
-              className="w-20 h-20 rounded-full"
-            />
-            <div className="flex-1">
-              <h3 className="text-gray-900">
-                {selectedProviderDetails.fullName}
-              </h3>
-              <p className="text-gray-600">
-                {selectedProviderDetails.categories
-                  .map((c) => c.name)
-                  .join(", ")}
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-4 h-4 ${
-                        i < Math.floor(selectedProviderDetails.averageRating)
-                          ? "fill-yellow-400 text-yellow-400"
-                          : "text-gray-300"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span>
-                  {selectedProviderDetails.averageRating.toFixed(1)} (
-                  {selectedProviderDetails.totalReviews || 0} reviews)
-                </span>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl text-gray-900">
-                ${selectedProviderDetails.hourlyRate}
-              </p>
-              <p className="text-sm text-gray-600">per hour</p>
-              {selectedProviderDetails.isAvailable && (
-                <Badge variant="default" className="mt-2">
-                  Available
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          {/* باقي الأقسام */}
-          {selectedProviderDetails.bio && (
-            <div>
-              <h4 className="mb-2 text-gray-900">About</h4>
-              <p className="text-gray-600">{selectedProviderDetails.bio}</p>
-            </div>
-          )}
-
-          {selectedProviderDetails.workingAreas?.length > 0 && (
-            <div>
-              <h4 className="mb-2 text-gray-900">Working Areas</h4>
-              <div className="flex flex-wrap gap-2">
-                {selectedProviderDetails.workingAreas.map((area, idx) => (
-                  <Badge key={idx} variant="secondary">
-                    {area.city}, {area.governorate}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {selectedProviderDetails.shiftPrices?.length > 0 && (
-            <div>
-              <h4 className="mb-2 text-gray-900">Service Pricing</h4>
-              <div className="space-y-2">
-                {selectedProviderDetails.shiftPrices.map((sp, idx) => (
-                  <div
-                    key={idx}
-                    className="flex justify-between items-center p-2 bg-gray-50 rounded"
-                  >
-                    <span className="text-sm">
-                      {sp.categoryName} - {sp.shiftTypeName}
-                    </span>
-                    <span className="text-gray-900">${sp.pricePerShift}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {selectedProviderDetails.availability?.length > 0 && (
-            <div>
-              <h4 className="mb-2 text-gray-900">Availability</h4>
-              <div className="space-y-2">
-                {selectedProviderDetails.availability
-                  .slice(0, 5)
-                  .map((avail, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2 border rounded"
-                    >
-                      <span className="text-sm">
-                        {new Date(avail.date).toLocaleDateString()}
-                      </span>
-                      <Badge
-                        variant={
-                          avail.isAvailable ? "default" : "secondary"
-                        }
-                      >
-                        {avail.shiftName}
-                      </Badge>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={() => setShowBookingDialog(true)}
-            className="w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-          >
-            Send Request
-          </button>
-        </div>
-      </>
-    )}
-  </DialogContent>
-</Dialog>
-
-      {/* Booking Dialog */}
-      <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
-        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="px-6 pt-6 pb-2">
-            <DialogTitle>Book Service</DialogTitle>
-            <DialogDescription>Select your preferred shift type, date, and time</DialogDescription>
-          </DialogHeader>
-          {selectedProviderDetails && selectedProvider && (
-            <div 
-              className="space-y-4 overflow-y-auto px-6 pb-6" 
-              style={{
-                maxHeight: 'calc(95vh - 140px)',
-                overflowY: 'auto'
-              }}
-            >
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <ImageWithFallback
-                  src={selectedProviderDetails.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + selectedProviderDetails.fullName}
-                  alt={selectedProviderDetails.fullName}
-                  className="w-12 h-12 rounded-full"
-                />
-                <div>
-                  <p className="text-gray-900">{selectedProviderDetails.fullName}</p>
-                  <p className="text-sm text-gray-600">{selectedProviderDetails.categories.map(c => c.name).join(', ')}</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block mb-2 text-gray-700">Select Category</label>
-                <select
-                  value={selectedCategoryId}
-                  onChange={(e) => setSelectedCategoryId(e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                >
-                  <option value="">Choose a category...</option>
-                  {selectedProviderDetails.categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {selectedCategoryId && selectedProviderDetails.shiftPrices && (
-                <div>
-                  <label className="block mb-2 text-gray-700">Select Shift Type</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {selectedProviderDetails.shiftPrices
-                      .filter(sp => sp.categoryId === selectedCategoryId)
-                      .map(sp => (
-                        <button
-                          key={sp.pricingId}
-                          onClick={() => setBookingShift(sp.shiftType)}
-                          className={`p-3 border-2 rounded-lg transition-all ${
-                            bookingShift === sp.shiftType
-                              ? 'border-[#FFA726] bg-[#FFA726] text-white'
-                              : 'border-gray-200 hover:border-[#FFA726]'
-                          }`}
-                        >
-                          <p className="text-sm">{sp.shiftTypeName}</p>
-                          <p className="text-xs">${sp.pricePerShift}</p>
-                        </button>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block mb-2 text-gray-700">Date</label>
-                <input
-                  type="date"
-                  value={bookingDate}
-                  onChange={(e) => setBookingDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-gray-700">Time</label>
-                <input
-                  type="time"
-                  value={bookingTime}
-                  onChange={(e) => setBookingTime(e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-gray-700">Address</label>
-                <input
-                  type="text"
-                  value={bookingAddress}
-                  onChange={(e) => setBookingAddress(e.target.value)}
-                  placeholder="Enter your address"
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-gray-700">Governorate</label>
-                <input
-                  type="text"
-                  value={bookingGovernorate}
-                  onChange={(e) => setBookingGovernorate(e.target.value)}
-                  placeholder="Enter governorate"
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-gray-700">Description (Optional)</label>
-                <textarea
-                  value={bookingDescription}
-                  onChange={(e) => setBookingDescription(e.target.value)}
-                  placeholder="Add any special instructions or requirements"
-                  rows={3}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
-                />
-              </div>
-
-              {selectedCategoryId && (
-                <div className="bg-[#E3F2FD] p-4 rounded-lg">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-700">Shift Type:</span>
-                    <span className="text-gray-900">{getShiftTypeName(bookingShift)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-700">Total Price:</span>
-                    <span className="text-xl text-gray-900">${getShiftPrice(bookingShift)}</span>
-                  </div>
-                </div>
-              )}
-
+      {/* Provider Profile Modal */}
+      {selectedProvider && !showBookingDialog && (
+        <div className="modal-overlay">
+          <div className="modal-content provider-dialog">
+            <div className="dialog-header">
+              <h2 className="dialog-title">Provider Profile</h2>
+              <p className="dialog-description">View detailed information about this provider</p>
               <button
-                onClick={handleSendRequest}
-                disabled={loading || !selectedCategoryId}
-                className="w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                onClick={() => {
+                  setSelectedProvider(null);
+                  setSelectedProviderDetails(null);
+                }}
+                className="close-button"
               >
-                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-                Confirm Request
+                <X className="close-icon" />
               </button>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
-      {/* Payment Dialog */}
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Payment</DialogTitle>
-            <DialogDescription>You will be redirected to Stripe to complete your payment</DialogDescription>
-          </DialogHeader>
-          {selectedRequestForPayment && (
-            <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-gray-700 mb-2">Amount to pay</p>
-                <p className="text-3xl text-gray-900">${selectedRequestForPayment.totalPrice}</p>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  🔒 Secure payment powered by Stripe. You'll be redirected to complete your payment securely.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600">
-                  <strong>Service:</strong> {selectedRequestForPayment.categoryName}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Provider:</strong> {selectedRequestForPayment.providerName}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Date:</strong> {new Date(selectedRequestForPayment.preferredDate).toLocaleDateString()}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Shift:</strong> {selectedRequestForPayment.shiftTypeName}
-                </p>
-              </div>
-
-              <button
-                onClick={handlePayment}
-                disabled={paymentLoading}
-                className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {paymentLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    Proceed to Payment - ${selectedRequestForPayment.totalPrice}
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Rating Dialog */}
-      <Dialog open={showRatingDialog} onOpenChange={setShowRatingDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rate Your Experience</DialogTitle>
-            <DialogDescription>Share your feedback about the service</DialogDescription>
-          </DialogHeader>
-          {selectedRequestForRating && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <ImageWithFallback
-                  src={selectedRequestForRating.providerAvatar}
-                  alt={selectedRequestForRating.providerName}
-                  className="w-20 h-20 rounded-full mx-auto mb-3"
-                />
-                <p className="text-gray-900">{selectedRequestForRating.providerName}</p>
-                <p className="text-sm text-gray-600">{new Date(selectedRequestForRating.preferredDate).toLocaleDateString()}</p>
-              </div>
-
-              {loadingFetchedReview ? (
-                <div className="py-6 text-center">Loading review...</div>
-              ) : Number(selectedRequestForRating.status) === 6 ? (
-                // Completed: either show existing review or the form to submit
-                fetchedReview ? (
-                  <SubmittedReview review={fetchedReview} />
-                ) : (
-                  <ReviewForm
-                    serviceRequestId={selectedRequestForRating.id}
-                    onSuccess={(r) => setFetchedReview(r)}
-                    onClose={() => setShowRatingDialog(false)}
+            {selectedProviderDetails && (
+              <div className="provider-dialog-content">
+                <div className="provider-summary">
+                  <ImageWithFallback
+                    src={selectedProviderDetails.avatarUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + selectedProviderDetails.fullName}
+                    alt={selectedProviderDetails.fullName}
+                    className="provider-dialog-avatar"
                   />
-                )
-              ) : (
-                <div className="p-4 text-center text-gray-600">You can leave a review only after the service is completed.</div>
-              )}
+                  <div className="provider-dialog-info">
+                    <h3 className="provider-dialog-name">{selectedProviderDetails.fullName}</h3>
+                    <p className="provider-dialog-categories">
+                      {selectedProviderDetails.categories.map((c) => c.name).join(", ")}
+                    </p>
+                    <div className="provider-dialog-rating">
+                      <div className="rating-stars">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`star-icon ${i < Math.floor(selectedProviderDetails.averageRating) ? 'star-filled' : 'star-empty'
+                              }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="rating-text">
+                        {selectedProviderDetails.averageRating.toFixed(1)} ({selectedProviderDetails.totalReviews || 0} reviews)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="provider-dialog-meta">
+                    <div className="provider-rate">${selectedProviderDetails.hourlyRate}/hr</div>
+                    {selectedProviderDetails.isAvailable && (
+                      <div className="availability-badge">Available</div>
+                    )}
+                  </div>
+                </div>
+
+                {selectedProviderDetails.bio && (
+                  <div className="provider-section">
+                    <h4 className="section-title">About</h4>
+                    <p className="section-content">{selectedProviderDetails.bio}</p>
+                  </div>
+                )}
+
+                {selectedProviderDetails?.workingAreas?.length > 0 && (
+                  <div className="provider-section">
+                    <h4 className="section-title">Working Areas</h4>
+                    <div className="areas-grid">
+                      {selectedProviderDetails?.workingAreas?.map((area, idx) => (
+                        <div key={idx} className="area-tag">
+                          <MapPin className="area-icon" />
+                          {area.city}, {area.governorate}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedProviderDetails?.shiftPrices?.length > 0 && (
+                  <div className="provider-section">
+                    <h4 className="section-title">Service Pricing</h4>
+                    <div className="pricing-grid">
+                      {selectedProviderDetails?.shiftPrices?.map((sp, idx) => (
+                        <div key={idx} className="pricing-item">
+                          <div className="pricing-info">
+                            <span className="pricing-category">{sp?.categoryName}</span>
+                            <span className="pricing-shift">{sp?.shiftTypeName}</span>
+                          </div>
+                          <span className="pricing-amount">${sp?.pricePerShift}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedProviderDetails?.availability?.length > 0 && (
+                  <div className="provider-section">
+                    <h4 className="section-title">Availability</h4>
+                    <div className="availability-list">
+                      {selectedProviderDetails?.availability?.slice(0, 5).map((avail, idx) => (
+                        <div key={idx} className="availability-item">
+                          <Calendar className="availability-icon" />
+                          <span className="availability-date">
+                            {new Date(avail.date).toLocaleDateString()}
+                          </span>
+                          <div className={`availability-status ${avail.isAvailable ? 'available' : 'unavailable'}`}>
+                            {avail.shiftName}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setShowBookingDialog(true)}
+                  className="book-service-button"
+                >
+                  Book Service
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Booking Modal */}
+      {showBookingDialog && (
+        <div className="modal-overlay">
+          <div className="modal-content booking-dialog">
+            <div className="dialog-header">
+              <h2 className="dialog-title">Book Service</h2>
+              <p className="dialog-description">Select your preferred shift type, date, and time</p>
+              <button
+                onClick={() => setShowBookingDialog(false)}
+                className="close-button"
+              >
+                <X className="close-icon" />
+              </button>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            {selectedProviderDetails && selectedProvider && (
+              <div className="booking-content">
+                <div className="booking-provider">
+                  <ImageWithFallback
+                    src={selectedProviderDetails.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + selectedProviderDetails.fullName}
+                    alt={selectedProviderDetails.fullName}
+                    className="booking-avatar"
+                  />
+                  <div className="booking-provider-info">
+                    <p className="booking-provider-name">{selectedProviderDetails.fullName}</p>
+                    <p className="booking-provider-categories">{selectedProviderDetails.categories.map(c => c.name).join(', ')}</p>
+                  </div>
+                </div>
+
+                <div className="booking-form">
+                  <div className="form-field">
+                    <label className="field-label">Select Category</label>
+                    <select
+                      value={selectedCategoryId}
+                      onChange={(e) => setSelectedCategoryId(e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="">Choose a category...</option>
+                      {selectedProviderDetails.categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedCategoryId && selectedProviderDetails.shiftPrices && (
+                    <div className="form-field">
+                      <label className="field-label">Select Shift Type</label>
+                      <div className="shift-grid">
+                        {selectedProviderDetails.shiftPrices
+                          .filter(sp => sp.categoryId === selectedCategoryId)
+                          .map(sp => (
+                            <button
+                              key={sp.pricingId}
+                              onClick={() => setBookingShift(sp.shiftType)}
+                              className={`shift-option ${bookingShift === sp.shiftType ? 'shift-option-active' : ''}`}
+                            >
+                              <span className="shift-name">{sp.shiftTypeName}</span>
+                              <span className="shift-price">${sp.pricePerShift}</span>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="form-row">
+                    <div className="form-field">
+                      <label className="field-label">Date</label>
+                      <input
+                        type="date"
+                        value={bookingDate}
+                        onChange={(e) => setBookingDate(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label className="field-label">Time</label>
+                      <input
+                        type="time"
+                        value={bookingTime}
+                        onChange={(e) => setBookingTime(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-field">
+                    <label className="field-label">Address</label>
+                    <input
+                      type="text"
+                      value={bookingAddress}
+                      onChange={(e) => setBookingAddress(e.target.value)}
+                      placeholder="Enter your address"
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label className="field-label">Governorate</label>
+                    <input
+                      type="text"
+                      value={bookingGovernorate}
+                      onChange={(e) => setBookingGovernorate(e.target.value)}
+                      placeholder="Enter governorate"
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label className="field-label">Description (Optional)</label>
+                    <textarea
+                      value={bookingDescription}
+                      onChange={(e) => setBookingDescription(e.target.value)}
+                      placeholder="Add any special instructions or requirements"
+                      rows={3}
+                      className="form-textarea"
+                    />
+                  </div>
+
+                  {selectedCategoryId && (
+                    <div className="booking-summary">
+                      <div className="summary-item">
+                        <span className="summary-label">Shift Type:</span>
+                        <span className="summary-value">{getShiftTypeName(bookingShift)}</span>
+                      </div>
+                      <div className="summary-item total">
+                        <span className="summary-label">Total Price:</span>
+                        <span className="summary-value">${getShiftPrice(bookingShift)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleSendRequest}
+                    disabled={loading || !selectedCategoryId}
+                    className="confirm-booking-button"
+                  >
+                    {loading && <Loader2 className="button-loader" />}
+                    Confirm Request
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentDialog && (
+        <div className="modal-overlay">
+          <div className="modal-content payment-dialog">
+            <div className="dialog-header">
+              <h2 className="dialog-title">Payment</h2>
+              <p className="dialog-description">You will be redirected to Stripe to complete your payment</p>
+              <button
+                onClick={() => setShowPaymentDialog(false)}
+                className="close-button"
+              >
+                <X className="close-icon" />
+              </button>
+            </div>
+
+            {selectedRequestForPayment && (
+              <div className="payment-content">
+                <div className="payment-amount-card">
+                  <p className="amount-label">Amount to pay</p>
+                  <p className="amount-value">${selectedRequestForPayment.totalPrice}</p>
+                </div>
+
+                <div className="payment-security">
+                  <p className="security-text">
+                    🔒 Secure payment powered by Stripe. You'll be redirected to complete your payment securely.
+                  </p>
+                </div>
+
+                <div className="payment-details">
+                  <div className="detail-item">
+                    <span className="detail-label">Service:</span>
+                    <span className="detail-value">{selectedRequestForPayment.categoryName}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Provider:</span>
+                    <span className="detail-value">{selectedRequestForPayment.providerName}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Date:</span>
+                    <span className="detail-value">{new Date(selectedRequestForPayment.preferredDate).toLocaleDateString()}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">Shift:</span>
+                    <span className="detail-value">{selectedRequestForPayment.shiftTypeName}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handlePayment}
+                  disabled={paymentLoading}
+                  className="proceed-payment-button"
+                >
+                  {paymentLoading ? (
+                    <>
+                      <Loader2 className="button-loader" />
+                      Processing...
+                    </>
+                  ) : (
+                    `Proceed to Payment - $${selectedRequestForPayment.totalPrice}`
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Rating Modal */}
+      {showRatingDialog && (
+        <div className="modal-overlay">
+          <div className="modal-content rating-dialog">
+            <div className="dialog-header">
+              <h2 className="dialog-title">Rate Your Experience</h2>
+              <p className="dialog-description">Share your feedback about the service</p>
+              <button
+                onClick={() => setShowRatingDialog(false)}
+                className="close-button"
+              >
+                <X className="close-icon" />
+              </button>
+            </div>
+
+            {selectedRequestForRating && (
+              <div className="rating-content">
+                <div className="rating-header">
+                  <ImageWithFallback
+                    src={selectedRequestForRating.providerAvatar}
+                    alt={selectedRequestForRating.providerName}
+                    className="rating-provider-avatar"
+                  />
+                  <p className="rating-provider-name">{selectedRequestForRating.providerName}</p>
+                  <p className="rating-service-date">{new Date(selectedRequestForRating.preferredDate).toLocaleDateString()}</p>
+                </div>
+
+                {loadingFetchedReview ? (
+                  <div className="loading-review">
+                    <Loader2 className="loading-spinner" />
+                    <p>Loading review...</p>
+                  </div>
+                ) : Number(selectedRequestForRating.status) === 6 ? (
+                  fetchedReview ? (
+                    <SubmittedReview review={fetchedReview} />
+                  ) : (
+                    <ReviewForm
+                      serviceRequestId={selectedRequestForRating.id}
+                      onSuccess={(r) => setFetchedReview(r)}
+                      onClose={() => setShowRatingDialog(false)}
+                    />
+                  )
+                ) : (
+                  <div className="rating-notice">
+                    <Clock3 className="notice-icon" />
+                    <p className="notice-text">You can leave a review only after the service is completed.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

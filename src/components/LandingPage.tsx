@@ -1,5 +1,7 @@
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Heart, Shield, Star, Clock, Users, Award } from 'lucide-react';
+import { Heart, Shield, Star, Clock, Users, Award, ChevronRight, CheckCircle, Play } from 'lucide-react';
+import CountUp from 'react-countup';
+import "../styles/LandingPage.css";
 
 interface LandingPageProps {
   navigate: (page: string) => void;
@@ -7,248 +9,408 @@ interface LandingPageProps {
 
 export function LandingPage({ navigate }: LandingPageProps) {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="landing-page">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Heart className="w-8 h-8 text-[#FFA726]" />
-            <span className="text-2xl">CarePro</span>
+      <header className="header">
+        <div className="header-container">
+          <div className="logo">
+            <div className="logo-icon">
+              <Heart className="icon" />
+            </div>
+            <span className="logo-text">CarePro</span>
           </div>
-          <nav className="hidden md:flex gap-6 items-center">
-            <button onClick={() => navigate('about')} className="text-gray-700 hover:text-[#FFA726] transition-colors">
+          <nav className="nav">
+            <button onClick={() => navigate('about')} className="nav-button">
               About
+              <div className="nav-underline"></div>
             </button>
-            <button onClick={() => navigate('faq')} className="text-gray-700 hover:text-[#FFA726] transition-colors">
+            <button onClick={() => navigate('faq')} className="nav-button">
               FAQ
+              <div className="nav-underline"></div>
             </button>
-            <button onClick={() => navigate('contact')} className="text-gray-700 hover:text-[#FFA726] transition-colors">
+            <button onClick={() => navigate('contact')} className="nav-button">
               Contact
+              <div className="nav-underline"></div>
             </button>
-            <button
-              onClick={() => navigate('login')}
-              className="px-5 py-2 border-2 border-[#FFA726] text-[#FFA726] rounded-lg hover:bg-[#FFA726] hover:text-white transition-all"
-            >
-              Login
-            </button>
-            <button
-              onClick={() => navigate('register')}
-              className="px-5 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-            >
-              Register
-            </button>
+            <div className="auth-buttons">
+              <button
+                onClick={() => navigate('login')}
+                className="login-button"
+              >
+                Login
+              </button>
+              <button
+                onClick={() => navigate('register')}
+                className="register-button"
+              >
+                Register
+              </button>
+            </div>
           </nav>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-[#E3F2FD] to-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h1 className="mb-6 text-gray-900">
-                Your trusted platform for elderly, child, and home care services
-              </h1>
-              <p className="text-xl text-gray-600 mb-8">
-                Connect with verified, experienced caregivers in your area. Book services easily and securely.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <button
-                  onClick={() => navigate('register')}
-                  className="px-8 py-4 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-                >
-                  Register as User
-                </button>
-                <button
-                  onClick={() => navigate('register')}
-                  className="px-8 py-4 border-2 border-[#FFA726] text-[#FFA726] rounded-lg hover:bg-[#FFA726] hover:text-white transition-all"
-                >
-                  Register as Provider
-                </button>
+      <section className="hero-section">
+        <div className="hero-background">
+          <div className="hero-bg-circle-1"></div>
+          <div className="hero-bg-circle-2"></div>
+        </div>
+        
+        <div className="hero-container">
+          <div className="hero-content">
+            <div className="trust-badge">
+              <div className="pulse-dot"></div>
+              <span>Trusted by 10,000+ families</span>
+            </div>
+            
+            <h1 className="hero-title">
+              Quality Care 
+              <span className="gradient-text"> When You Need It</span>
+            </h1>
+            
+            <p className="hero-description">
+              Connect with verified, experienced caregivers for elderly care, child care, and home nursing services. Book securely and with confidence.
+            </p>
+
+            <div className="hero-buttons">
+              <button
+                onClick={() => navigate('register')}
+                className="primary-button"
+              >
+                Get Started Today
+                <ChevronRight className="button-icon" />
+              </button>
+              <button
+                onClick={() => navigate('about')}
+                className="secondary-button"
+              >
+                <Play className="button-icon" />
+                How It Works
+              </button>
+            </div>
+
+            <div className="hero-stats">
+              <div className="avatar-group">
+                {[1,2,3,4].map((i) => (
+                  <div key={i} className="avatar">
+                    {i}
+                  </div>
+                ))}
+              </div>
+              <div className="stats-text">
+                <div className="stats-title">2,500+ Verified Caregivers</div>
+                <div className="rating">
+                  <Star className="star-icon" />
+                  <span>4.9/5 average rating</span>
+                </div>
               </div>
             </div>
-            <div className="relative">
+          </div>
+          
+          <div className="hero-image-container">
+            <div className="hero-image-wrapper">
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1676281050264-178eff38874a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbGRlcmx5JTIwY2FyZSUyMG51cnNlfGVufDF8fHx8MTc2MTQwNzMzOHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="Caregiver with elderly person"
-                className="rounded-2xl shadow-2xl w-full h-[400px] object-cover"
+                src="https://images.unsplash.com/photo-1559757175-0eb30cd8c063?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                alt="Doctor and patient in medical setting"
+                className="hero-image"
               />
+              <div className="image-overlay"></div>
+            </div>
+            
+            {/* Floating Cards */}
+            <div className="floating-card verified-card">
+              <div className="card-content">
+                <div className="card-icon green">
+                  <CheckCircle className="icon" />
+                </div>
+                <div>
+                  <div className="card-title">Verified</div>
+                  <div className="card-subtitle">Background Checked</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="floating-card experience-card">
+              <div className="card-content">
+                <div className="card-title-large">15+</div>
+                <div className="card-subtitle">Years Experience</div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="mb-4 text-gray-900">Why Choose CarePro?</h2>
-            <p className="text-xl text-gray-600">The most trusted care platform</p>
+      <section className="features-section">
+        <div className="container">
+          <div className="section-header">
+            <div className="section-badge">
+              <Shield className="badge-icon" />
+              Why Choose CarePro
+            </div>
+            <h2 className="section-title">The Most Trusted Care Platform</h2>
+            <p className="section-description">We combine technology with human touch to deliver exceptional care experiences</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-[#E3F2FD] p-8 rounded-xl text-center">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-8 h-8 text-[#FFA726]" />
+          
+          <div className="features-grid">
+            {[
+              {
+                icon: Shield,
+                title: "Verified Caregivers",
+                description: "All caregivers are thoroughly verified with background checks and certification validation",
+                color: "blue"
+              },
+              {
+                icon: Clock,
+                title: "Easy Booking",
+                description: "Simple booking process with flexible scheduling and instant confirmations",
+                color: "green"
+              },
+              {
+                icon: Star,
+                title: "Quality Rated",
+                description: "Share feedback and help others make informed decisions with our rating system",
+                color: "orange"
+              }
+            ].map((feature, index) => (
+              <div key={index} className="feature-card">
+                <div className={`feature-icon ${feature.color}`}>
+                  <feature.icon className="icon" />
+                </div>
+                <h3 className="feature-title">{feature.title}</h3>
+                <p className="feature-description">{feature.description}</p>
               </div>
-              <h3 className="mb-3 text-gray-900">Find Trusted Caregivers</h3>
-              <p className="text-gray-600">
-                All our caregivers are verified with background checks, certifications, and experience validation.
-              </p>
-            </div>
-            <div className="bg-[#E3F2FD] p-8 rounded-xl text-center">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-[#FFA726]" />
-              </div>
-              <h3 className="mb-3 text-gray-900">Book Easily and Securely</h3>
-              <p className="text-gray-600">
-                Simple booking process with flexible scheduling. Secure payments and instant confirmations.
-              </p>
-            </div>
-            <div className="bg-[#E3F2FD] p-8 rounded-xl text-center">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
-                <Star className="w-8 h-8 text-[#FFA726]" />
-              </div>
-              <h3 className="mb-3 text-gray-900">Rate Your Experience</h3>
-              <p className="text-gray-600">
-                Share feedback and help others make informed decisions. Quality assurance through reviews.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Services Section */}
-      <section className="py-20 bg-[#E3F2FD]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="mb-4 text-gray-900">Our Services</h2>
-            <p className="text-xl text-gray-600">Comprehensive care solutions for your family</p>
+      <section className="services-section">
+        <div className="container">
+          <div className="section-header">
+            <div className="section-badge">
+              <Users className="badge-icon" />
+              Our Services
+            </div>
+            <h2 className="section-title">Comprehensive Care Solutions</h2>
+            <p className="section-description">Professional care services tailored to your family's needs</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <ImageWithFallback
-                src="https://images.unsplash.com/photo-1676281050264-178eff38874a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbGRlcmx5JTIwY2FyZSUyMG51cnNlfGVufDF8fHx8MTc2MTQwNzMzOHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="Elderly care"
-                className="rounded-lg w-full h-48 object-cover mb-4"
-              />
-              <h3 className="mb-2 text-gray-900">Elderly Care</h3>
-              <p className="text-gray-600">
-                Compassionate care for seniors including companionship, medication management, and daily activities assistance.
-              </p>
+          
+          <div className="services-grid">
+            {[
+              {
+                image: "https://images.unsplash.com/photo-1519494080410-f9aa76cb4283?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=300&q=80",
+                title: "Elderly Care",
+                description: "Compassionate care for seniors including companionship and daily activities assistance",
+                features: ["Medication Management", "Personal Care", "Companionship"]
+              },
+              {
+                image: "https://images.unsplash.com/photo-1584516150909-c43483ee7932?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=300&q=80",
+                title: "Child Care",
+                description: "Experienced nannies providing loving care and educational activities",
+                features: ["Educational Activities", "Safe Supervision", "Nutrition Support"]
+              },
+              {
+                image: "https://images.unsplash.com/photo-1584467735871-8db9ac8e5e3a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=300&q=80",
+                title: "Home Nursing",
+                description: "Professional nursing services including wound care and health monitoring",
+                features: ["Wound Care", "Medication Admin", "Health Monitoring"]
+              }
+            ].map((service, index) => (
+              <div key={index} className="service-card">
+                <div className="service-image-container">
+                  <ImageWithFallback
+                    src={service.image}
+                    alt={service.title}
+                    className="service-image"
+                  />
+                  <div className="service-image-overlay"></div>
+                </div>
+                <div className="service-content">
+                  <h3 className="service-title">{service.title}</h3>
+                  <p className="service-description">{service.description}</p>
+                  <div className="service-features">
+                    {service.features.map((feature, featureIndex) => (
+                      <div key={featureIndex} className="service-feature">
+                        <CheckCircle className="feature-check" />
+                        {feature}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Medical Professionals Section */}
+      <section className="doctors-section">
+        <div className="container">
+          <div className="section-header">
+            <div className="section-badge">
+              <Award className="badge-icon" />
+              Our Medical Team
             </div>
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <ImageWithFallback
-                src="https://images.unsplash.com/photo-1578349035260-9f3d4042f1f7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaGlsZCUyMGNhcmV8ZW58MXx8fHwxNzYxNDA3MzM5fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="Child care"
-                className="rounded-lg w-full h-48 object-cover mb-4"
-              />
-              <h3 className="mb-2 text-gray-900">Child Care</h3>
-              <p className="text-gray-600">
-                Experienced nannies and babysitters to provide loving care, educational activities, and safe supervision.
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <ImageWithFallback
-                src="https://images.unsplash.com/photo-1608979827489-2b855e79debe?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxob21lJTIwbnVyc2luZ3xlbnwxfHx8fDE3NjE0MDczMzl8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="Home nursing"
-                className="rounded-lg w-full h-48 object-cover mb-4"
-              />
-              <h3 className="mb-2 text-gray-900">Home Nursing</h3>
-              <p className="text-gray-600">
-                Professional nursing services at home including wound care, medication administration, and health monitoring.
-              </p>
-            </div>
+            <h2 className="section-title">Qualified Healthcare Professionals</h2>
+            <p className="section-description">Meet our team of certified doctors, nurses, and caregivers</p>
+          </div>
+          
+          <div className="doctors-grid">
+            {[
+              {
+                image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=500&q=80",
+                name: "Dr. Sarah Johnson",
+                role: "Senior Geriatric Specialist",
+                experience: "12+ years experience"
+              },
+              {
+                image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=500&q=80",
+                name: "Dr. Michael Chen",
+                role: "Pediatric Care Expert",
+                experience: "8+ years experience"
+              },
+              {
+                image: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=500&q=80",
+                name: "Dr. Emily Rodriguez",
+                role: "Home Nursing Director",
+                experience: "15+ years experience"
+              }
+            ].map((doctor, index) => (
+              <div key={index} className="doctor-card">
+                <div className="doctor-image-container">
+                  <ImageWithFallback
+                    src={doctor.image}
+                    alt={doctor.name}
+                    className="doctor-image"
+                  />
+                  <div className="verified-badge">
+                    <CheckCircle className="badge-icon" />
+                  </div>
+                </div>
+                <h3 className="doctor-name">{doctor.name}</h3>
+                <p className="doctor-role">{doctor.role}</p>
+                <p className="doctor-experience">{doctor.experience}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8 text-center">
-            <div>
-              <Users className="w-12 h-12 text-[#FFA726] mx-auto mb-3" />
-              <div className="text-4xl mb-2 text-gray-900">2,500+</div>
-              <p className="text-gray-600">Verified Caregivers</p>
-            </div>
-            <div>
-              <Heart className="w-12 h-12 text-[#FFA726] mx-auto mb-3" />
-              <div className="text-4xl mb-2 text-gray-900">10,000+</div>
-              <p className="text-gray-600">Happy Families</p>
-            </div>
-            <div>
-              <Award className="w-12 h-12 text-[#FFA726] mx-auto mb-3" />
-              <div className="text-4xl mb-2 text-gray-900">15+</div>
-              <p className="text-gray-600">Years Experience</p>
-            </div>
-            <div>
-              <Star className="w-12 h-12 text-[#FFA726] mx-auto mb-3" />
-              <div className="text-4xl mb-2 text-gray-900">4.9/5</div>
-              <p className="text-gray-600">Average Rating</p>
-            </div>
+      <section className="stats-section">
+        <div className="container">
+          <div className="stats-grid">
+            {[
+              { icon: Users, end: 2500, suffix: "+", label: "Verified Caregivers" },
+              { icon: Heart, end: 10000, suffix: "+", label: "Happy Families" },
+              { icon: Award, end: 15, suffix: "+", label: "Years Experience" },
+              { icon: Star, end: 4.9, suffix: "/5", label: "Average Rating", decimals: 1 }
+            ].map((stat, index) => (
+              <div key={index} className="stat-item">
+                <div className="stat-icon">
+                  <stat.icon className="icon" />
+                </div>
+                <div className="stat-number">
+                  <CountUp 
+                    end={stat.end} 
+                    duration={3} 
+                    decimals={stat.decimals || 0}
+                    enableScrollSpy 
+                  />
+                  {stat.suffix}
+                </div>
+                <p className="stat-label">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="cta-section">
+        <div className="container">
+          <h2 className="cta-title">Ready to Find Your Perfect Caregiver?</h2>
+          <p className="cta-description">Join thousands of families who trust CarePro for their care needs</p>
+          <div className="cta-buttons">
+            <button
+              onClick={() => navigate('register')}
+              className="cta-primary-button"
+            >
+              Get Started Free
+            </button>
+            <button
+              onClick={() => navigate('contact')}
+              className="cta-secondary-button"
+            >
+              Contact Sales
+            </button>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Heart className="w-6 h-6 text-[#FFA726]" />
-                <span className="text-xl">CarePro</span>
+      <footer className="footer">
+        <div className="container">
+          <div className="footer-grid">
+            <div className="footer-column">
+              <div className="footer-logo">
+                <div className="logo-icon">
+                  <Heart className="icon" />
+                </div>
+                <span className="logo-text">CarePro</span>
               </div>
-              <p className="text-gray-400">
-                Your trusted platform for quality care services.
+              <p className="footer-description">
+                Your trusted platform for quality elderly, child, and home care services.
               </p>
             </div>
-            <div>
-              <h4 className="mb-4">Quick Links</h4>
-              <ul className="space-y-2">
-                <li>
-                  <button onClick={() => navigate('about')} className="text-gray-400 hover:text-white transition-colors">
-                    About Us
-                  </button>
-                </li>
-                <li>
-                  <button onClick={() => navigate('faq')} className="text-gray-400 hover:text-white transition-colors">
-                    FAQ
-                  </button>
-                </li>
-                <li>
-                  <button onClick={() => navigate('contact')} className="text-gray-400 hover:text-white transition-colors">
-                    Contact
-                  </button>
-                </li>
+            
+            <div className="footer-column">
+              <h4 className="footer-title">Quick Links</h4>
+              <ul className="footer-links">
+                {['about', 'faq', 'contact'].map((item) => (
+                  <li key={item}>
+                    <button 
+                      onClick={() => navigate(item)}
+                      className="footer-link"
+                    >
+                      {item.charAt(0).toUpperCase() + item.slice(1)}
+                    </button>
+                  </li>
+                ))}
               </ul>
             </div>
-            <div>
-              <h4 className="mb-4">Legal</h4>
-              <ul className="space-y-2">
-                <li>
-                  <button onClick={() => navigate('privacy')} className="text-gray-400 hover:text-white transition-colors">
-                    Privacy Policy
-                  </button>
-                </li>
-                <li>
-                  <button onClick={() => navigate('terms')} className="text-gray-400 hover:text-white transition-colors">
-                    Terms & Conditions
-                  </button>
-                </li>
+            
+            <div className="footer-column">
+              <h4 className="footer-title">Legal</h4>
+              <ul className="footer-links">
+                {['privacy', 'terms'].map((item) => (
+                  <li key={item}>
+                    <button 
+                      onClick={() => navigate(item)}
+                      className="footer-link"
+                    >
+                      {item === 'privacy' ? 'Privacy Policy' : 'Terms & Conditions'}
+                    </button>
+                  </li>
+                ))}
               </ul>
             </div>
-            <div>
-              <h4 className="mb-4">Contact Info</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li>Email: support@carepro.com</li>
-                <li>Phone: +1 (555) 123-4567</li>
-                <li>Address: 123 Care Street, City</li>
+            
+            <div className="footer-column">
+              <h4 className="footer-title">Contact Info</h4>
+              <ul className="footer-contact">
+                <li>support@carepro.com</li>
+                <li>+1 (555) 123-4567</li>
+                <li>123 Care Street, City</li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 CarePro. All rights reserved.</p>
+          
+          <div className="footer-bottom">
+            <p>&copy; 2025 CarePro. All rights reserved. Built with ❤️ for better care.</p>
           </div>
         </div>
       </footer>

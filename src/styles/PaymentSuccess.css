@@ -1,0 +1,185 @@
+.payment-success-page {
+  min-height: 100vh;
+  background-color: #E3F2FD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.payment-success-loading {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 2rem;
+  max-width: 28rem;
+  width: 100%;
+  text-align: center;
+}
+
+.payment-success-spinner {
+  width: 4rem;
+  height: 4rem;
+  color: #FFA726;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem auto;
+}
+
+.payment-success-loading-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.payment-success-loading-text {
+  color: #6B7280;
+  margin: 0;
+}
+
+.payment-success-card {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 2rem;
+  max-width: 28rem;
+  width: 100%;
+}
+
+.payment-success-content {
+  text-align: center;
+}
+
+.payment-success-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 5rem;
+  height: 5rem;
+  background-color: #DCFCE7;
+  border-radius: 9999px;
+  margin-bottom: 1.5rem;
+}
+
+.payment-success-check-icon {
+  width: 3rem;
+  height: 3rem;
+  color: #16A34A;
+}
+
+.payment-success-title {
+  font-size: 1.875rem;
+  font-weight: bold;
+  color: #111827;
+  margin-bottom: 0.75rem;
+}
+
+.payment-success-message {
+  color: #6B7280;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.payment-success-session {
+  background-color: #F9FAFB;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.payment-success-session-label {
+  font-size: 0.875rem;
+  color: #6B7280;
+  margin-bottom: 0.5rem;
+}
+
+.payment-success-session-id {
+  font-size: 0.75rem;
+  color: #111827;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  word-break: break-all;
+  margin: 0;
+}
+
+.payment-success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.payment-success-requests-btn,
+.payment-success-home-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
+}
+
+.payment-success-requests-btn {
+  background-color: #FFA726;
+  color: white;
+}
+
+.payment-success-requests-btn:hover {
+  background-color: #FB8C00;
+}
+
+.payment-success-home-btn {
+  background-color: #E5E7EB;
+  color: #374151;
+}
+
+.payment-success-home-btn:hover {
+  background-color: #D1D5DB;
+}
+
+.payment-success-requests-icon,
+.payment-success-home-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .payment-success-card,
+  .payment-success-loading {
+    padding: 1.5rem;
+  }
+  
+  .payment-success-title {
+    font-size: 1.5rem;
+  }
+  
+  .payment-success-icon {
+    width: 4rem;
+    height: 4rem;
+  }
+  
+  .payment-success-check-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .payment-success-spinner {
+    width: 3rem;
+    height: 3rem;
+  }
+}

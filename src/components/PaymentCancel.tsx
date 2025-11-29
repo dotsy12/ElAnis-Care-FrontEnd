@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { XCircle, Home, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import '../styles/PaymentCancel.css';
 
 interface PaymentCancelProps {
   navigate?: (page: string) => void;
@@ -17,26 +18,26 @@ export function PaymentCancel({ navigate, requestId: propRequestId }: PaymentCan
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#E3F2FD] flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6">
-            <XCircle className="w-12 h-12 text-red-600" />
+    <div className="payment-cancel-page">
+      <div className="payment-cancel-card">
+        <div className="payment-cancel-content">
+          <div className="payment-cancel-icon">
+            <XCircle className="payment-cancel-x-icon" />
           </div>
           
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">Payment Cancelled</h1>
+          <h1 className="payment-cancel-title">Payment Cancelled</h1>
           
-          <p className="text-gray-600 mb-6">
+          <p className="payment-cancel-message">
             Your payment was not completed. Don't worry, no charges were made to your account.
           </p>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-yellow-800">
+          <div className="payment-cancel-warning">
+            <p className="payment-cancel-warning-text">
               Your booking request is still active. You can try paying again from your requests page.
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="payment-cancel-actions">
             <button
               onClick={() => {
                 if (navigate) {
@@ -45,9 +46,9 @@ export function PaymentCancel({ navigate, requestId: propRequestId }: PaymentCan
                   window.location.href = '/';
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+              className="payment-cancel-retry-btn"
             >
-              <RotateCcw className="w-5 h-5" />
+              <RotateCcw className="payment-cancel-retry-icon" />
               Try Again
             </button>
             
@@ -59,9 +60,9 @@ export function PaymentCancel({ navigate, requestId: propRequestId }: PaymentCan
                   window.location.href = '/';
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              className="payment-cancel-home-btn"
             >
-              <Home className="w-5 h-5" />
+              <Home className="payment-cancel-home-icon" />
               Back to Dashboard
             </button>
           </div>

@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { User } from '../App';
 import {
   Home, UserCircle, Calendar as CalendarIcon, MapPin, FileText, DollarSign,
-  LogOut, Check, X, Clock, Star, Bell, Loader2
+  LogOut, Check, X, Clock, Star, Bell, Loader2, Pencil
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { toast } from 'sonner';
 import { Badge } from './ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Calendar } from './ui/calendar';
 import { Textarea } from './ui/textarea';
 import SubmittedReview from './reviews/SubmittedReview';
 import { fetchReviewByRequest } from '../api/reviews';
+import '../styles/ProviderDashboard.css';
 
 interface ProviderDashboardProps {
   user: User | null;
@@ -35,7 +35,7 @@ interface ServiceRequest {
   clientName: string;
   categoryName: string;
   preferredDate: string;
-  shiftType: number; // 1=3h, 2=12h, 3=fullday
+  shiftType: number;
   shiftTypeName: string;
   status: number;
   statusText: string;
@@ -97,25 +97,25 @@ interface ProviderAvailability {
   id: string;
   date: string;
   isAvailable: boolean;
-  availableShift: number; // 1=3 Hours, 2=12 Hours, 3=24 Hours
+  availableShift: number;
   notes: string;
 }
 
 export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboardProps) {
-  // ServiceRequestStatus enum values (keep in sync with backend)
   const STATUS = {
-      Pending: 1,
-      Accepted: 2,
-      PaymentPending: 3,
-      Paid: 4,
-      InProgress: 5,
-      Completed: 6,
-      Cancelled: 7,
-      Rejected: 8,
+    Pending: 1,
+    Accepted: 2,
+    PaymentPending: 3,
+    Paid: 4,
+    InProgress: 5,
+    Completed: 6,
+    Cancelled: 7,
+    Rejected: 8,
   } as const;
+
   const [activeTab, setActiveTab] = useState('home');
   const [selectedDates, setSelectedDates] = useState<Date[]>([new Date()]);
-  const [selectedTimeSlots, setSelectedTimeSlots] = useState<number[]>([1]); // Changed to numbers
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<number[]>([1]);
   const [workAreas, setWorkAreas] = useState<WorkingArea[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
   const [availabilities, setAvailabilities] = useState<ProviderAvailability[]>([]);
@@ -127,17 +127,14 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     city: '',
     district: ''
   });
-  
-  // Dashboard Data from API
+
   const [dashboardData, setDashboardData] = useState<ProviderDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Provider Requests
+
   const [providerRequests, setProviderRequests] = useState<ServiceRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [requestReviews, setRequestReviews] = useState<Record<string, any | null>>({});
-  
-  // Profile Data
+
   const [profileData, setProfileData] = useState<ProviderProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -146,6 +143,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     experience: '',
     profilePicture: null as File | null,
   });
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isAvailable, setIsAvailable] = useState(true);
 
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -154,37 +152,21 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
   const [loadingStartJobId, setLoadingStartJobId] = useState<string | null>(null);
   const [loadingCompleteJobId, setLoadingCompleteJobId] = useState<string | null>(null);
 
-  // Shift types matching backend enum
   const timeSlots = [
     { id: 1, name: '3 Hours', description: 'Short shift' },
     { id: 2, name: '12 Hours', description: 'Half day' },
     { id: 3, name: '24 Hours', description: 'Full day' }
   ];
 
-  // Fetch dashboard data from API
   const fetchDashboardData = async () => {
     const accessToken = localStorage.getItem('accessToken');
-    
+
     if (!accessToken) {
       toast.error('Authentication required');
       setIsLoading(false);
       return;
     }
 
-
-    const getStatusVariant = (status: number) => {
-  switch (status) {
-    case 1: return "pending";
-    case 2: return "accepted";
-    case 3: return "payment_pending";
-    case 4: return "paid";
-    case 5: return "in_progress";
-    case 6: return "completed";
-    case 7: return "cancelled";
-    case 8: return "rejected";
-    default: return "default_fallback";
-  }
-};
     try {
       setIsLoading(true);
       const response = await fetch('https://elanis.runasp.net/api/Provider/dashboard', {
@@ -200,14 +182,11 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       if (response.ok && result.succeeded) {
         setDashboardData(result.data);
         setWorkAreas(result.data.workingAreas || []);
-        // Persist provider id so requests can be fetched even if
-        // dashboard data isn't immediately available (page reloads, etc.)
         try {
           if (result.data && result.data.profileId) {
             localStorage.setItem('providerId', String(result.data.profileId));
           }
         } catch (e) {
-          // ignore localStorage exceptions
           console.debug('Could not persist providerId:', e);
         }
       } else {
@@ -221,7 +200,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Fetch dashboard on mount
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -233,7 +211,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
   const upcomingJobs = dashboardData?.upcomingJobs || [];
   const recentRequests = dashboardData?.recentRequests || [];
 
-  // Fetch provider profile
   const fetchProviderProfile = async () => {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -243,6 +220,8 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
 
     try {
       setIsLoadingProfile(true);
+
+      // Fetch provider profile
       const response = await fetch('https://elanis.runasp.net/api/Provider/profile', {
         method: 'GET',
         headers: {
@@ -252,15 +231,43 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       });
 
       const result = await response.json();
+      console.log('📥 Provider Profile Fetch Response:', result);
 
       if (response.ok && result.succeeded) {
-        setProfileData(result.data);
+        // Also fetch user profile to get profilePicture
+        const userResponse = await fetch('https://elanis.runasp.net/api/User/profile', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const userResult = await userResponse.json();
+        console.log('📥 User Profile Fetch Response:', userResult);
+        console.log('📸 Profile Picture URL:', userResult.data?.profilePicture);
+
+        // Merge the profilePicture from user profile into provider profile
+        const mergedData = {
+          ...result.data,
+          profilePicture: userResult.data?.profilePicture || null
+        };
+
+        setProfileData(mergedData);
         setProfileForm({
           bio: result.data.bio || '',
           experience: result.data.experience || '',
           profilePicture: null,
         });
         setIsAvailable(result.data.isAvailable);
+
+        // Clean up preview URL after getting fresh data
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(null);
+        }
+
+        console.log('✅ Profile data set, profilePicture:', mergedData.profilePicture);
       } else {
         toast.error(result.message || 'Failed to load profile');
       }
@@ -272,7 +279,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Update provider profile
   const handleSaveProfile = async () => {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -282,12 +288,41 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
 
     try {
       setIsSavingProfile(true);
+
+      const hasNewImage = profileForm.profilePicture !== null;
+
+      // Upload profile picture separately if provided
+      if (hasNewImage && profileForm.profilePicture) {
+        console.log('📤 Uploading profile picture:', profileForm.profilePicture.name);
+
+        const imageFormData = new FormData();
+        imageFormData.append('ProfilePicture', profileForm.profilePicture);
+
+        const imageResponse = await fetch('https://elanis.runasp.net/api/User/profile-picture', {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: imageFormData,
+        });
+
+        const imageResult = await imageResponse.json();
+        console.log('📥 Profile Picture Upload Response:', imageResult);
+
+        if (!imageResponse.ok || !imageResult.succeeded) {
+          toast.error(imageResult.message || 'Failed to upload profile picture');
+          setIsSavingProfile(false);
+          return;
+        }
+
+        toast.success('Profile picture uploaded successfully!');
+      }
+
+      // Update bio and experience
+      console.log('📤 Updating bio and experience...');
       const formData = new FormData();
       formData.append('Bio', profileForm.bio);
       formData.append('Experience', profileForm.experience);
-      if (profileForm.profilePicture) {
-        formData.append('ProfilePicture', profileForm.profilePicture);
-      }
 
       const response = await fetch('https://elanis.runasp.net/api/Provider/profile', {
         method: 'PUT',
@@ -298,12 +333,31 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       });
 
       const result = await response.json();
+      console.log('📥 Save Profile Response:', result);
 
       if (response.ok && result.succeeded) {
         toast.success(result.message || 'Profile updated successfully');
-        setProfileData(result.data);
-        fetchDashboardData(); // Refresh dashboard
+
+        // Clean up preview URL after successful upload
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(null);
+        }
+
+        console.log('🔄 Refetching profile to get updated data...');
+        // Refetch profile to get the updated data
+        await fetchProviderProfile();
+
+        // Also refresh dashboard
+        fetchDashboardData();
+
+        // Reset the file input
+        setProfileForm(prev => ({
+          ...prev,
+          profilePicture: null
+        }));
       } else {
+        console.error('❌ Save failed:', result.message);
         toast.error(result.message || 'Failed to update profile');
       }
     } catch (error) {
@@ -314,7 +368,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Update availability status
   const handleToggleAvailability = async (newStatus: boolean) => {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -337,7 +390,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       if (response.ok && result.succeeded) {
         setIsAvailable(newStatus);
         toast.success(result.message || `Status updated to ${newStatus ? 'Available' : 'Unavailable'}`);
-        fetchDashboardData(); // Refresh dashboard
+        fetchDashboardData();
       } else {
         toast.error(result.message || 'Failed to update availability');
       }
@@ -347,7 +400,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Fetch working areas
   const fetchWorkingAreas = async () => {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -380,7 +432,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Add working area
   const addWorkingArea = async () => {
     if (!newArea.governorate.trim() || !newArea.city.trim() || !newArea.district.trim()) {
       toast.error('Please fill all fields');
@@ -408,7 +459,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       if (response.ok && result.succeeded) {
         toast.success(result.message || 'Working area added successfully');
         setNewArea({ governorate: '', city: '', district: '' });
-        fetchWorkingAreas(); // Refresh list
+        fetchWorkingAreas();
       } else {
         toast.error(result.message || 'Failed to add working area');
       }
@@ -418,7 +469,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Delete working area
   const deleteWorkingArea = async (areaId: string) => {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -439,7 +489,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
 
       if (response.ok && result.succeeded) {
         toast.success(result.message || 'Working area deleted successfully');
-        fetchWorkingAreas(); // Refresh list
+        fetchWorkingAreas();
       } else {
         toast.error(result.message || 'Failed to delete working area');
       }
@@ -464,7 +514,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          status: 2, // 2 = Accepted
+          status: 2,
           reason: null
         }),
       });
@@ -473,7 +523,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
 
       if (response.ok && result.succeeded) {
         toast.success(result.message || 'Request accepted successfully!');
-        // Refresh requests and dashboard
         fetchProviderRequests();
         fetchDashboardData();
       } else {
@@ -505,7 +554,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          status: 3, // 3 = Rejected
+          status: 3,
           reason: rejectionReason
         }),
       });
@@ -517,7 +566,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
         setShowRejectDialog(false);
         setSelectedRequestForReject(null);
         setRejectionReason('');
-        // Refresh requests and dashboard
         fetchProviderRequests();
         fetchDashboardData();
       } else {
@@ -529,78 +577,73 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-    // Start job (provider only)
-    const handleStartJob = async (requestId: string) => {
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) {
-        toast.error('Authentication required');
-        return;
+  const handleStartJob = async (requestId: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    try {
+      setLoadingStartJobId(requestId);
+      const response = await fetch(`https://elanis.runasp.net/api/Requests/${requestId}/start`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Service started successfully');
+        fetchProviderRequests();
+        fetchDashboardData();
+      } else {
+        toast.error(result.message || 'Failed to start service');
+        console.error('Start job error:', result);
       }
+    } catch (error) {
+      console.error('Error starting job:', error);
+      toast.error('Failed to start job');
+    } finally {
+      setLoadingStartJobId(null);
+    }
+  };
 
-      try {
-        setLoadingStartJobId(requestId);
-        const response = await fetch(`https://elanis.runasp.net/api/Requests/${requestId}/start`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
+  const handleCompleteJob = async (requestId: string) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      toast.error('Authentication required');
+      return;
+    }
 
-        const result = await response.json();
-        if (response.ok && result.succeeded) {
-          toast.success(result.message || 'Service started successfully');
-          // Refresh data
-          fetchProviderRequests();
-          fetchDashboardData();
-        } else {
-          // show validation or structured error
-          toast.error(result.message || 'Failed to start service');
-          console.error('Start job error:', result);
-        }
-      } catch (error) {
-        console.error('Error starting job:', error);
-        toast.error('Failed to start job');
-      } finally {
-        setLoadingStartJobId(null);
+    try {
+      setLoadingCompleteJobId(requestId);
+      const response = await fetch(`https://elanis.runasp.net/api/Requests/${requestId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      if (response.ok && result.succeeded) {
+        toast.success(result.message || 'Service completed successfully');
+        fetchProviderRequests();
+        fetchDashboardData();
+      } else {
+        toast.error(result.message || 'Failed to complete service');
+        console.error('Complete job error:', result);
       }
-    };
-
-    // Complete job (provider only)
-    const handleCompleteJob = async (requestId: string) => {
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) {
-        toast.error('Authentication required');
-        return;
-      }
-
-      try {
-        setLoadingCompleteJobId(requestId);
-        const response = await fetch(`https://elanis.runasp.net/api/Requests/${requestId}/complete`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        const result = await response.json();
-        if (response.ok && result.succeeded) {
-          toast.success(result.message || 'Service completed successfully');
-          // Refresh data
-          fetchProviderRequests();
-          fetchDashboardData();
-        } else {
-          toast.error(result.message || 'Failed to complete service');
-          console.error('Complete job error:', result);
-        }
-      } catch (error) {
-        console.error('Error completing job:', error);
-        toast.error('Failed to complete job');
-      } finally {
-        setLoadingCompleteJobId(null);
-      }
-    };
+    } catch (error) {
+      console.error('Error completing job:', error);
+      toast.error('Failed to complete job');
+    } finally {
+      setLoadingCompleteJobId(null);
+    }
+  };
 
   const toggleTimeSlot = (slotId: number) => {
     setSelectedTimeSlots(prev =>
@@ -608,7 +651,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     );
   };
 
-  // Fetch availability
   const fetchAvailability = async () => {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -618,7 +660,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
 
     try {
       setIsLoadingAvailability(true);
-      // Get dates range for current month
       const now = new Date();
       const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
@@ -637,12 +678,10 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       const result = await response.json();
 
       if (response.ok && result.succeeded) {
-        // Backend returns { availability: [], bookedDates: [] }
         const calendarData = result.data;
         if (calendarData && calendarData.availability) {
           setAvailabilities(calendarData.availability);
         } else if (Array.isArray(result.data)) {
-          // Fallback: if data is directly an array
           setAvailabilities(result.data);
         } else {
           setAvailabilities([]);
@@ -661,7 +700,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Save availability
   const handleSaveAvailability = async () => {
     if (selectedDates.length === 0) {
       toast.error('Please select at least one date');
@@ -686,7 +724,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       let failCount = 0;
       const errors: string[] = [];
 
-      // Save each combination of date and time slot
       for (const date of selectedDates) {
         for (const shift of selectedTimeSlots) {
           try {
@@ -723,7 +760,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
         }
       }
 
-      // Show results
       if (successCount > 0 && failCount === 0) {
         toast.success(`✅ ${successCount} availability ${successCount === 1 ? 'entry' : 'entries'} saved successfully!`);
         setSelectedDates([]);
@@ -746,7 +782,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Delete availability
   const handleDeleteAvailability = async (id: string) => {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -777,33 +812,26 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Fetch availability when tab is opened
   useEffect(() => {
     if (activeTab === 'availability') {
       fetchAvailability();
     }
   }, [activeTab]);
 
-  // Fetch profile when Profile tab is opened
   useEffect(() => {
     if (activeTab === 'profile') {
       fetchProviderProfile();
     }
   }, [activeTab]);
 
-  // Fetch working areas when Areas tab is opened
   useEffect(() => {
     if (activeTab === 'areas') {
       fetchWorkingAreas();
     } else if (activeTab === 'requests') {
-      // Try to fetch provider requests. fetchProviderRequests will
-      // use dashboardData.profileId when available or fall back to
-      // a persisted providerId in localStorage.
       fetchProviderRequests();
     }
   }, [activeTab, dashboardData?.profileId]);
 
-  // Fetch provider requests
   const fetchProviderRequests = async () => {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
@@ -811,12 +839,10 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       return;
     }
 
-    // Get provider ID from dashboard data or from persisted storage
     const storedProviderId = localStorage.getItem('providerId');
     const providerIdToUse = dashboardData?.profileId || storedProviderId;
 
     if (!providerIdToUse) {
-      // Don't show error, dashboard or stored id will be available soon
       console.log('Waiting for dashboard data or stored providerId to load...');
       return;
     }
@@ -824,7 +850,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     try {
       setIsLoadingRequests(true);
       console.log('Fetching requests for provider:', providerIdToUse);
-      
+
       const response = await fetch(`https://elanis.runasp.net/api/Requests/provider/${providerIdToUse}`, {
         method: 'GET',
         headers: {
@@ -838,26 +864,21 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       console.log('Response data:', result);
 
       if (response.ok && result.succeeded) {
-        // Transform the data to match ServiceRequest interface
         const transformedRequests = (result.data || []).map((req: any) => {
-          // Coerce status to number when possible (API might send string)
           const numericStatus = typeof req.status === 'number' ? req.status : parseInt(req.status, 10) || 0;
           return {
             id: req.id,
-            // The API may return clientName or providerName depending on endpoint; prefer clientName then fallback
             clientName: req.clientName || req.userName || req.providerName || 'Client',
             categoryName: req.categoryName,
             preferredDate: req.preferredDate,
             shiftType: req.shiftType,
             shiftTypeName: req.shiftTypeName,
             status: numericStatus,
-            // keep both textual fields if provided
             statusText: req.statusText || req.statusName || String(req.status),
             statusName: req.statusName || req.statusText || String(req.status),
             price: req.totalPrice || req.price || 0,
             address: req.address,
             governorate: req.governorate || '',
-            // pass through any flags
             canStart: req.canStart,
             canComplete: req.canComplete,
           };
@@ -876,7 +897,6 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Load review for a specific request
   const loadReviewForRequest = async (requestId: string) => {
     try {
       const res = await fetchReviewByRequest(requestId);
@@ -891,437 +911,469 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     }
   };
 
-  // Helpers to determine state from different API shapes
   const canStartRequest = (r: ServiceRequest) => {
-    // If backend provides explicit flags prefer them
     if ((r as any).canStart === true) return true;
-    // Prefer numeric status when available
     const numeric = Number((r as any).status) || 0;
     if (numeric === STATUS.Paid) return true;
-    // Fall back to textual checks (English + common Arabic words)
     const statusText = ((r as any).statusText || (r as any).statusName || String(r.status || '')).toString().toLowerCase();
     const paidKeywords = ['paid', 'paymentpaid', 'payment', 'مدفوع', 'مدفوعة', 'تم الدفع', 'مدفوعاً', 'مدفوعه'];
     return paidKeywords.some(k => statusText.includes(k));
   };
 
   const canCompleteRequest = (r: ServiceRequest) => {
-    // If backend provides explicit flags prefer them
     if ((r as any).canComplete === true) return true;
     const statusText = ((r as any).statusText || (r as any).statusName || String(r.status || '')).toString().toLowerCase();
     return Number((r as any).status) === 5 || statusText.includes('inprogress') || statusText.includes('in process') || statusText.includes('in-progress');
   };
-const statusStyles = {
-  1: { backgroundColor: '#F3F4F6', color: '#111827' }, // gray-100 bg, gray-900 text
-  2: { backgroundColor: '#3B82F6', color: '#FFFFFF' }, // blue-500 bg, white text
-  3: { backgroundColor: '#EF4444', color: '#FFFFFF' }, // red-500 bg, white text
-  4: { backgroundColor: '#10B981', color: '#FFFFFF' }, // green-500 bg, white text
-  5: { backgroundColor: '#F59E0B', color: '#111827' }, // yellow-500 bg, gray-900 text
-  6: { backgroundColor: '#8B5CF6', color: '#FFFFFF' }, // purple-500 bg, white text
-  7: { backgroundColor: '#F97316', color: '#FFFFFF' }, // orange-500 bg, white text
-  8: { backgroundColor: '#EC4899', color: '#FFFFFF' }, // pink-500 bg, white text
-};
+
+  const statusStyles = {
+    1: { backgroundColor: '#F3F4F6', color: '#111827' },
+    2: { backgroundColor: '#3B82F6', color: '#FFFFFF' },
+    3: { backgroundColor: '#EF4444', color: '#FFFFFF' },
+    4: { backgroundColor: '#10B981', color: '#FFFFFF' },
+    5: { backgroundColor: '#F59E0B', color: '#111827' },
+    6: { backgroundColor: '#8B5CF6', color: '#FFFFFF' },
+    7: { backgroundColor: '#F97316', color: '#FFFFFF' },
+    8: { backgroundColor: '#EC4899', color: '#FFFFFF' },
+  };
+
   return (
-    <div className="min-h-screen bg-[#E3F2FD]">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h2 className="text-gray-900">CarePro - Provider</h2>
-          <div className="flex items-center gap-4">
-            <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-              <Bell className="w-6 h-6" />
+    <div className="provider-dashboard">
+      {/* Header Section */}
+      <header className="provider-header">
+        <div className="provider-header-inner">
+          <h2 className="provider-header-title">CarePro - Provider</h2>
+          <div className="provider-header-actions">
+            <button className="provider-notification-btn">
+              <Bell className="provider-notification-icon" />
               {pendingRequests > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-[#FFA726] rounded-full"></span>
+                <span className="provider-notification-dot"></span>
               )}
             </button>
-            <div className="flex items-center gap-3">
+            <div className="provider-user-info">
               <ImageWithFallback
                 src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Provider'}
                 alt={user?.name || 'Provider'}
-                className="w-10 h-10 rounded-full"
+                className="provider-user-avatar"
               />
-              <div>
-                <p className="text-gray-900">{user?.name}</p>
-                <p className="text-sm text-gray-500">Provider</p>
+              <div className="provider-user-details">
+                <p className="provider-user-name">{user?.name}</p>
+                <p className="provider-user-role">Provider</p>
               </div>
             </div>
             <button
               onClick={onLogout}
-              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="provider-logout-btn"
               title="Logout"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="provider-logout-icon" />
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid md:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="md:col-span-1">
-            <div className="bg-white rounded-xl shadow-md p-4 space-y-2">
+      {/* Main Content Area */}
+      <div className="provider-main-container">
+        <div className="provider-layout-grid">
+          {/* Sidebar Navigation */}
+          <div className="provider-sidebar-container">
+            <div className="provider-sidebar">
               <button
                 onClick={() => setActiveTab('home')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'home' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`provider-sidebar-btn ${activeTab === 'home' ? 'provider-sidebar-btn-active' : ''}`}
               >
-                <Home className="w-5 h-5" />
+                <Home className="provider-sidebar-icon" />
                 <span>Dashboard</span>
               </button>
               <button
                 onClick={() => setActiveTab('profile')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'profile' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`provider-sidebar-btn ${activeTab === 'profile' ? 'provider-sidebar-btn-active' : ''}`}
               >
-                <UserCircle className="w-5 h-5" />
+                <UserCircle className="provider-sidebar-icon" />
                 <span>Profile</span>
               </button>
               <button
                 onClick={() => setActiveTab('availability')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'availability' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`provider-sidebar-btn ${activeTab === 'availability' ? 'provider-sidebar-btn-active' : ''}`}
               >
-                <CalendarIcon className="w-5 h-5" />
+                <CalendarIcon className="provider-sidebar-icon" />
                 <span>Availability</span>
               </button>
               <button
                 onClick={() => setActiveTab('areas')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'areas' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`provider-sidebar-btn ${activeTab === 'areas' ? 'provider-sidebar-btn-active' : ''}`}
               >
-                <MapPin className="w-5 h-5" />
+                <MapPin className="provider-sidebar-icon" />
                 <span>Work Areas</span>
               </button>
               <button
                 onClick={() => setActiveTab('requests')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'requests' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`provider-sidebar-btn ${activeTab === 'requests' ? 'provider-sidebar-btn-active' : ''}`}
               >
-                <FileText className="w-5 h-5" />
+                <FileText className="provider-sidebar-icon" />
                 <span>Requests</span>
                 {pendingRequests > 0 && (
-                  <Badge variant="destructive" className="ml-auto">
+                  <Badge variant="destructive" className="provider-sidebar-badge">
                     {pendingRequests}
                   </Badge>
                 )}
               </button>
               <button
                 onClick={() => setActiveTab('earnings')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === 'earnings' ? 'bg-[#FFA726] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`provider-sidebar-btn ${activeTab === 'earnings' ? 'provider-sidebar-btn-active' : ''}`}
               >
-                <DollarSign className="w-5 h-5" />
+                <DollarSign className="provider-sidebar-icon" />
                 <span>Earnings</span>
               </button>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="md:col-span-3">
+          {/* Tab Content Area */}
+          <div className="provider-content-container">
+            {/* Dashboard Home Tab */}
             {activeTab === 'home' && (
-              <div className="space-y-6">
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <DollarSign className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Total Earnings</p>
-                        <p className="text-2xl text-gray-900">${totalEarnings}</p>
-                      </div>
+              <div className="provider-dashboard-content">
+                {/* Statistics Cards Grid */}
+                <div className="provider-stats-grid">
+                  <div className="provider-stat-card">
+                    <div className="provider-stat-icon provider-stat-icon-green">
+                      <DollarSign className="provider-stat-svg" />
+                    </div>
+                    <div className="provider-stat-content">
+                      <p className="provider-stat-label">Total Earnings</p>
+                      <p className="provider-stat-value">${totalEarnings}</p>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <FileText className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Completed Jobs</p>
-                        <p className="text-2xl text-gray-900">{completedJobs}</p>
-                      </div>
+                  <div className="provider-stat-card">
+                    <div className="provider-stat-icon provider-stat-icon-blue">
+                      <FileText className="provider-stat-svg" />
+                    </div>
+                    <div className="provider-stat-content">
+                      <p className="provider-stat-label">Completed Jobs</p>
+                      <p className="provider-stat-value">{completedJobs}</p>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                        <Star className="w-6 h-6 text-yellow-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Average Rating</p>
-                        <p className="text-2xl text-gray-900">{averageRating}</p>
-                      </div>
+                  <div className="provider-stat-card">
+                    <div className="provider-stat-icon provider-stat-icon-yellow">
+                      <Star className="provider-stat-svg" />
+                    </div>
+                    <div className="provider-stat-content">
+                      <p className="provider-stat-label">Average Rating</p>
+                      <p className="provider-stat-value">{averageRating}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-4 text-gray-900">Pending Requests</h3>
-                  <div className="space-y-3">
+                {/* Pending Requests Section */}
+                <div className="provider-section-card">
+                  <h3 className="provider-section-title">Pending Requests</h3>
+                  <div className="provider-requests-list">
                     {recentRequests
-                      .filter(r => r.status === 1) // 1 = Pending
+                      .filter(r => r.status === 1)
                       .slice(0, 3)
                       .map(request => (
-                        <div key={request.id} className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-[#FFA726] rounded-full flex items-center justify-center text-white font-bold">
+                        <div key={request.id} className="provider-request-item">
+                          <div className="provider-request-user">
+                            <div className="provider-request-avatar">
                               {request.clientName.charAt(0)}
                             </div>
-                            <div>
-                              <p className="text-gray-900">{request.clientName}</p>
-                              <p className="text-sm text-gray-500">
+                            <div className="provider-request-details">
+                              <p className="provider-request-name">{request.clientName}</p>
+                              <p className="provider-request-meta">
                                 {new Date(request.preferredDate).toLocaleDateString()} - {request.shiftTypeName}
                               </p>
                             </div>
                           </div>
-                          <p className="text-gray-900">${request.price}</p>
+                          <p className="provider-request-price">${request.price}</p>
                         </div>
                       ))}
                     {recentRequests.filter(r => r.status === 1).length === 0 && (
-                      <p className="text-center text-gray-500 py-4">No pending requests</p>
+                      <p className="provider-empty-state">No pending requests</p>
                     )}
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-4 text-gray-900">Upcoming Jobs</h3>
-                  <div className="space-y-3">
+                {/* Upcoming Jobs Section */}
+                <div className="provider-section-card">
+                  <h3 className="provider-section-title">Upcoming Jobs</h3>
+                  <div className="provider-jobs-list">
                     {upcomingJobs.slice(0, 3).map(job => (
-                      <div key={job.id} className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg">
-                        <div>
-                          <p className="text-gray-900">{job.clientName}</p>
-                          <p className="text-sm text-gray-500">{new Date(job.preferredDate).toLocaleDateString()} - {job.shiftTypeName}</p>
+                      <div key={job.id} className="provider-job-item">
+                        <div className="provider-job-info">
+                          <p className="provider-job-client">{job.clientName}</p>
+                          <p className="provider-job-meta">{new Date(job.preferredDate).toLocaleDateString()} - {job.shiftTypeName}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-gray-900">${job.price}</p>
-                          <Badge variant="secondary" className="mt-1">{job.statusText}</Badge>
+                        <div className="provider-job-details">
+                          <p className="provider-job-price">${job.price}</p>
+                          <Badge variant="secondary" className="provider-job-badge">{job.statusText}</Badge>
                         </div>
                       </div>
                     ))}
                     {upcomingJobs.length === 0 && (
-                      <p className="text-center text-gray-500 py-4">No upcoming jobs</p>
+                      <p className="provider-empty-state">No upcoming jobs</p>
                     )}
                   </div>
                 </div>
               </div>
             )}
 
+            {/* Profile Tab */}
             {activeTab === 'profile' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="mb-6 text-gray-900">My Profile</h3>
+              <div className="provider-section-card">
+                <h3 className="provider-section-title">My Profile</h3>
                 {isLoadingProfile ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+                  <div className="provider-loading">
+                    <div className="provider-spinner"></div>
                   </div>
                 ) : profileData ? (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-4 mb-6">
-                      <ImageWithFallback
-                        src={profileData.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData.email}`}
-                        alt={`${profileData.firstName} ${profileData.lastName}`}
-                        className="w-20 h-20 rounded-full"
-                      />
-                      <div className="flex-1">
-                        <h4 className="text-gray-900">{profileData.firstName} {profileData.lastName}</h4>
-                        <p className="text-gray-600">{profileData.email}</p>
-                        <Badge className="mt-2">Approved Provider</Badge>
+                  <div className="provider-profile-content">
+                    {/* Profile Header with Avatar and Availability */}
+                    <div className="provider-profile-header">
+                      {/* Profile Picture with Edit Button */}
+                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                        <ImageWithFallback
+                          src={previewUrl || profileData.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData.email}`}
+                          alt={`${profileData.firstName} ${profileData.lastName}`}
+                          className="provider-profile-avatar"
+                        />
+                        {/* Edit Button Overlay */}
+                        <button
+                          onClick={() => {
+                            // Trigger the hidden file input
+                            document.getElementById('profile-picture-input')?.click();
+                          }}
+                          style={{
+                            position: 'absolute',
+                            bottom: '5px',
+                            right: '5px',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            backgroundColor: '#ff6b35',
+                            border: '2px solid white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                            e.currentTarget.style.backgroundColor = '#ff5722';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.backgroundColor = '#ff6b35';
+                          }}
+                          title="Change profile picture"
+                          type="button"
+                        >
+                          <Pencil size={18} color="white" />
+                        </button>
+                        {/* Hidden File Input */}
+                        <input
+                          id="profile-picture-input"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setProfileForm({ ...profileForm, profilePicture: file });
+                              // Create preview URL
+                              const url = URL.createObjectURL(file);
+                              setPreviewUrl(url);
+                              toast.success('Image selected. Click "Save Changes" to upload.');
+                            }
+                          }}
+                          style={{ display: 'none' }}
+                        />
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-gray-600">
+                      <div className="provider-profile-info">
+                        <h4 className="provider-profile-name">{profileData.firstName} {profileData.lastName}</h4>
+                        <p className="provider-profile-email">{profileData.email}</p>
+                        <Badge className="provider-profile-badge">Approved Provider</Badge>
+                        {profileForm.profilePicture && (
+                          <p style={{ fontSize: '0.75rem', color: '#ff6b35', marginTop: '5px', fontWeight: '500' }}>
+                            📷 New picture selected - Save to upload
+                          </p>
+                        )}
+                      </div>
+                      <div className="provider-availability-toggle">
+                        <span className="provider-availability-text">
                           {isAvailable ? 'Available' : 'Unavailable'}
                         </span>
                         <button
                           onClick={() => handleToggleAvailability(!isAvailable)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            isAvailable ? 'bg-green-600' : 'bg-gray-300'
-                          }`}
+                          className={`provider-toggle ${isAvailable ? 'provider-toggle-active' : ''}`}
                         >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              isAvailable ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
+                          <span className="provider-toggle-slider"></span>
                         </button>
                       </div>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-gray-700 mb-2">Phone Number</label>
+                    {/* Profile Form Grid */}
+                    <div className="provider-form-grid">
+                      <div className="provider-form-group">
+                        <label className="provider-form-label">Phone Number</label>
                         <input
                           type="tel"
                           value={profileData.phoneNumber}
                           readOnly
-                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg bg-gray-50"
+                          className="provider-form-input provider-form-input-readonly"
                         />
                       </div>
-                      <div>
-                        <label className="block text-gray-700 mb-2">National ID</label>
+                      <div className="provider-form-group">
+                        <label className="provider-form-label">National ID</label>
                         <input
                           type="text"
                           value={profileData.nationalId}
                           readOnly
-                          className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg bg-gray-50"
+                          className="provider-form-input provider-form-input-readonly"
                         />
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-gray-700 mb-2">Professional Bio</label>
+                    {/* Bio and Experience Sections */}
+                    <div className="provider-form-group">
+                      <label className="provider-form-label">Professional Bio</label>
                       <Textarea
                         value={profileForm.bio}
                         onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
                         rows={5}
-                        className="focus:border-[#FFA726]"
+                        className="provider-textarea"
                         placeholder="Tell us about yourself..."
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-gray-700 mb-2">Experience</label>
+                    <div className="provider-form-group">
+                      <label className="provider-form-label">Experience</label>
                       <Textarea
                         value={profileForm.experience}
                         onChange={(e) => setProfileForm({ ...profileForm, experience: e.target.value })}
                         rows={5}
-                        className="focus:border-[#FFA726]"
+                        className="provider-textarea"
                         placeholder="Describe your experience..."
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-gray-700 mb-2">Profile Picture</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setProfileForm({ ...profileForm, profilePicture: e.target.files?.[0] || null })}
-                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726]"
-                      />
-                    </div>
-
-                    <div>
-                      <h4 className="mb-3 text-gray-900">Service Categories</h4>
-                      <div className="flex flex-wrap gap-2">
+                    {/* Service Categories */}
+                    <div className="provider-categories-section">
+                      <h4 className="provider-subtitle">Service Categories</h4>
+                      <div className="provider-categories-list">
                         {profileData.categories.map(cat => (
-                          <Badge key={cat.id} variant="secondary">
+                          <Badge key={cat.id} variant="secondary" className="provider-category-badge">
                             {cat.icon} {cat.name}
                           </Badge>
                         ))}
                       </div>
                     </div>
 
-                    <div>
-                      <h4 className="mb-3 text-gray-900">Working Areas</h4>
-                      <div className="space-y-2">
+                    {/* Working Areas */}
+                    <div className="provider-areas-section">
+                      <h4 className="provider-subtitle">Working Areas</h4>
+                      <div className="provider-areas-list">
                         {profileData.workingAreas.map(area => (
-                          <div key={area.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <span className="text-gray-700">
+                          <div key={area.id} className="provider-area-item">
+                            <span className="provider-area-text">
                               {area.governorate}, {area.city} - {area.district}
                             </span>
-                            <Badge variant={area.isActive ? "default" : "secondary"}>
+                            <span style={{ color: area.isActive ? 'green' : 'red' }}>
                               {area.isActive ? 'Active' : 'Inactive'}
-                            </Badge>
+                            </span>
                           </div>
                         ))}
                         {profileData.workingAreas.length === 0 && (
-                          <p className="text-gray-500 text-sm">No working areas configured</p>
+                          <p className="provider-empty-text">No working areas configured</p>
                         )}
                       </div>
                     </div>
 
+                    {/* Save Button */}
                     <button
                       onClick={handleSaveProfile}
                       disabled={isSavingProfile}
-                      className="px-6 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="provider-save-btn"
                     >
                       {isSavingProfile ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 ) : (
-                  <p className="text-center text-gray-500 py-12">Failed to load profile</p>
+                  <p className="provider-error-state">Failed to load profile</p>
                 )}
               </div>
             )}
 
+            {/* Availability Tab */}
             {activeTab === 'availability' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="mb-6 text-gray-900">Manage Availability</h3>
+              <div className="provider-section-card">
+                <h3 className="provider-section-title">Manage Availability</h3>
                 {isLoadingAvailability ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+                  <div className="provider-loading">
+                    <div className="provider-spinner"></div>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="mb-3 text-gray-900">Select Available Days</h4>
-                      <div className="border-2 border-gray-200 rounded-lg p-4">
+                  <div className="provider-availability-content">
+                    {/* Calendar Section */}
+                    <div className="provider-calendar-section">
+                      <h4 className="provider-subtitle">Select Available Days</h4>
+                      <div className="provider-calendar-container">
                         <Calendar
                           mode="multiple"
                           selected={selectedDates}
                           onSelect={(dates: Date[] | undefined) => setSelectedDates(dates as Date[])}
-                          className="rounded-md"
+                          className="provider-calendar"
                         />
                       </div>
-                      <p className="text-sm text-gray-600 mt-2">
+                      <p className="provider-selection-count">
                         {selectedDates.length} day(s) selected
                       </p>
                     </div>
 
-                    <div>
-                      <h4 className="mb-3 text-gray-900">Available Shift Duration</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Time Slots Section */}
+                    <div className="provider-shifts-section">
+                      <h4 className="provider-subtitle">Available Shift Duration</h4>
+                      <div className="provider-shifts-grid">
                         {timeSlots.map(slot => (
                           <button
                             key={slot.id}
                             onClick={() => toggleTimeSlot(slot.id)}
-                            className={`p-4 border-2 rounded-lg transition-all ${
-                              selectedTimeSlots.includes(slot.id)
-                                ? 'border-[#FFA726] bg-[#FFA726] text-white'
-                                : 'border-gray-200 hover:border-[#FFA726]'
-                            }`}
+                            className={`provider-shift-btn ${selectedTimeSlots.includes(slot.id) ? 'provider-shift-btn-active' : ''}`}
                           >
-                            <Clock className="w-6 h-6 mx-auto mb-2" />
-                            <p className="text-base font-semibold">{slot.name}</p>
-                            <p className={`text-xs mt-1 ${
-                              selectedTimeSlots.includes(slot.id) ? 'text-white/80' : 'text-gray-500'
-                            }`}>
-                              {slot.description}
-                            </p>
+                            <Clock className="provider-shift-icon" />
+                            <p className="provider-shift-name">{slot.name}</p>
+                            <p className="provider-shift-description">{slot.description}</p>
                           </button>
                         ))}
                       </div>
-                      <p className="text-sm text-gray-600 mt-2">
+                      <p className="provider-shift-hint">
                         Select shift duration(s) you're available for
                       </p>
                     </div>
 
-                    <div>
-                      <h4 className="mb-3 text-gray-900">Notes (Optional)</h4>
+                    {/* Notes Section */}
+                    <div className="provider-notes-section">
+                      <h4 className="provider-subtitle">Notes (Optional)</h4>
                       <Textarea
                         value={availabilityNotes}
                         onChange={(e) => setAvailabilityNotes(e.target.value)}
                         placeholder="Add any notes about your availability..."
                         rows={3}
-                        className="focus:border-[#FFA726]"
+                        className="provider-textarea"
                       />
                     </div>
 
+                    {/* Save Availability Button */}
                     <button
                       onClick={handleSaveAvailability}
                       disabled={isSavingAvailability || selectedDates.length === 0 || selectedTimeSlots.length === 0}
-                      className="w-full py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="provider-save-availability-btn"
                     >
                       {isSavingAvailability ? (
                         <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <div className="provider-btn-spinner"></div>
                           Saving...
                         </>
                       ) : (
@@ -1329,19 +1381,20 @@ const statusStyles = {
                       )}
                     </button>
 
+                    {/* Existing Availability List */}
                     {availabilities.length > 0 && (
-                      <div className="mt-8">
-                        <h4 className="mb-4 text-gray-900">Your Availability Schedule</h4>
-                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                      <div className="provider-availability-list">
+                        <h4 className="provider-subtitle">Your Availability Schedule</h4>
+                        <div className="provider-availability-items">
                           {availabilities.map(availability => (
                             <div
                               key={availability.id}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                              className="provider-availability-item"
                             >
-                              <div className="flex items-center gap-3">
-                                <CalendarIcon className="w-5 h-5 text-[#FFA726]" />
-                                <div>
-                                  <p className="text-gray-900 font-medium">
+                              <div className="provider-availability-info">
+                                <CalendarIcon className="provider-availability-calendar-icon" />
+                                <div className="provider-availability-details">
+                                  <p className="provider-availability-date">
                                     {new Date(availability.date).toLocaleDateString('en-US', {
                                       weekday: 'short',
                                       year: 'numeric',
@@ -1349,7 +1402,7 @@ const statusStyles = {
                                       day: 'numeric'
                                     })}
                                   </p>
-                                  <p className="text-sm text-gray-600">
+                                  <p className="provider-availability-shift">
                                     {timeSlots.find(s => s.id === availability.availableShift)?.name || 'Unknown'}
                                     {availability.notes && ` - ${availability.notes}`}
                                   </p>
@@ -1357,10 +1410,10 @@ const statusStyles = {
                               </div>
                               <button
                                 onClick={() => handleDeleteAvailability(availability.id)}
-                                className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                                className="provider-delete-btn"
                                 title="Delete"
                               >
-                                <X className="w-5 h-5" />
+                                <X className="provider-delete-icon" />
                               </button>
                             </div>
                           ))}
@@ -1372,81 +1425,84 @@ const statusStyles = {
               </div>
             )}
 
+            {/* Work Areas Tab */}
             {activeTab === 'areas' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="mb-6 text-gray-900">Work Areas</h3>
+              <div className="provider-section-card">
+                <h3 className="provider-section-title">Work Areas</h3>
                 {isLoadingAreas ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+                  <div className="provider-loading">
+                    <div className="provider-spinner"></div>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      <h4 className="text-gray-900 font-medium">Add New Working Area</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="provider-areas-content">
+                    {/* Add New Area Form */}
+                    <div className="provider-add-area">
+                      <h4 className="provider-subtitle">Add New Working Area</h4>
+                      <div className="provider-area-form-grid">
                         <input
                           type="text"
                           value={newArea.governorate}
                           onChange={(e) => setNewArea({ ...newArea, governorate: e.target.value })}
                           placeholder="Governorate (e.g., Cairo)"
-                          className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                          className="provider-area-input"
                         />
                         <input
                           type="text"
                           value={newArea.city}
                           onChange={(e) => setNewArea({ ...newArea, city: e.target.value })}
                           placeholder="City (e.g., Nasr City)"
-                          className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                          className="provider-area-input"
                         />
                         <input
                           type="text"
                           value={newArea.district}
                           onChange={(e) => setNewArea({ ...newArea, district: e.target.value })}
                           placeholder="District (e.g., District 1)"
-                          className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                          className="provider-area-input"
                         />
                       </div>
                       <button
                         onClick={addWorkingArea}
-                        className="px-6 py-2 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
+                        className="provider-add-area-btn"
                       >
-                        Add Working Area
+                        Save
                       </button>
                     </div>
 
-                    <div className="space-y-3">
-                      <h4 className="text-gray-900 font-medium">Your Work Areas:</h4>
+                    {/* Existing Areas List */}
+                    <div className="provider-areas-list-section">
+                      <h4 className="provider-subtitle">Your Work Areas:</h4>
                       {workAreas.length > 0 ? (
                         workAreas.map(area => (
                           <div
                             key={area.id}
-                            className="flex items-center justify-between p-4 bg-[#E3F2FD] rounded-lg border-2 border-gray-200"
+                            className="provider-work-area-item"
                           >
-                            <div className="flex items-center gap-3">
-                              <MapPin className="w-5 h-5 text-[#FFA726]" />
-                              <div>
-                                <p className="text-gray-900 font-medium">
+                            <div className="provider-work-area-info">
+                              <MapPin className="provider-area-icon" />
+                              <div className="provider-work-area-details">
+                                <p className="provider-work-area-location">
                                   {area.governorate}, {area.city}
                                 </p>
-                                <p className="text-sm text-gray-600">{area.district}</p>
+                                <p className="provider-work-area-district">{area.district}</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={area.isActive ? "default" : "secondary"}>
-                                {area.isActive ? 'Active' : 'Inactive'}
-                              </Badge>
+                            <div className="provider-work-area-actions">
+                              <div>
+                                <span>{area.isActive ? 'Active' : 'Inactive'}</span>
+                              </div>
                               <button
                                 onClick={() => deleteWorkingArea(area.id)}
-                                className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                                className="provider-delete-btn"
                                 title="Delete area"
                               >
-                                <X className="w-5 h-5" />
+                                <X className="provider-delete-icon" />
                               </button>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <p className="text-center text-gray-500 py-8">
+                        <p className="provider-empty-state">
                           No working areas added yet. Add your first working area above.
                         </p>
                       )}
@@ -1456,191 +1512,191 @@ const statusStyles = {
               </div>
             )}
 
+            {/* Requests Tab */}
             {activeTab === 'requests' && (
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="mb-6 text-gray-900">Service Requests</h3>
+              <div className="provider-section-card">
+                <h3 className="provider-section-title">Service Requests</h3>
                 {isLoadingRequests ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFA726]"></div>
+                  <div className="provider-loading">
+                    <div className="provider-spinner"></div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="provider-requests-content">
                     {providerRequests.map(request => (
-                    <div key={request.id} className="border-2 border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 bg-[#FFA726] rounded-full flex items-center justify-center text-white font-bold text-xl">
-                          {request.clientName.charAt(0)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-gray-900">{request.clientName}</h4>
-               
-
-                  <Badge style={(statusStyles as any)[request.status]}>
-                    {request.statusText}
-                  </Badge>
-
+                      <div key={request.id} className="provider-request-card">
+                        <div className="provider-request-header">
+                          <div className="provider-request-avatar-large">
+                            {request.clientName.charAt(0)}
                           </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
-                            <p>📍 {request.address}</p>
-                            <p>📅 {new Date(request.preferredDate).toLocaleDateString()}</p>
-                            <p>🏷️ {request.categoryName}</p>
-                            <p>⏱️ {request.shiftTypeName}</p>
-                          </div>
-                          <p className="text-lg text-gray-900 mb-3">
-                            Payment: <span>${request.price}</span>
-                          </p>
+                          <div className="provider-request-main">
+                            <div className="provider-request-title">
+                              <h4 className="provider-request-client">{request.clientName}</h4>
+                              {/* <Badge style={(statusStyles as any)[request.status]}>
+                                {request.statusText}
+                              </Badge> */}
+                              <span style={request.status === 6 ? { color: 'white', background: 'green', padding: '2px 5px', borderRadius: '5px' } : { color: 'white', background: 'blue', padding: '2px 5px', borderRadius: '5px' }}>
+                                {request.statusText}
+                              </span>
+                            </div>
+                            <div className="provider-request-meta-grid">
+                              <p>📍 {request.address}</p>
+                              <p>📅 {new Date(request.preferredDate).toLocaleDateString()}</p>
+                              <p>🏷️ {request.categoryName}</p>
+                              <p>⏱️ {request.shiftTypeName}</p>
+                            </div>
+                            <p className="provider-request-price-large">
+                              Payment: <span>${request.price}</span>
+                            </p>
 
-                          {/* Show review if request is completed */}
-                          {Number(request.status) === 6 && (
-                            <div className="mb-4 p-3 border-l-4 border-purple-500 bg-purple-50 rounded">
-                              {requestReviews[request.id] ? (
-                                <SubmittedReview review={requestReviews[request.id]} />
-                              ) : (
+                            {/* Review Section for Completed Jobs */}
+                            {Number(request.status) === 6 && (
+                              <div className="provider-review-section">
+                                {requestReviews[request.id] ? (
+                                  <SubmittedReview review={requestReviews[request.id]} />
+                                ) : (
+                                  <button
+                                    onClick={() => loadReviewForRequest(request.id)}
+                                    className="provider-review-btn"
+                                  >
+                                    {requestReviews[request.id] === null ? 'No review yet' : 'Load to review...'}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Action Buttons Based on Request Status */}
+                            {request.status === 1 && (
+                              <div className="provider-request-actions">
                                 <button
-                                  onClick={() => loadReviewForRequest(request.id)}
-                                  className="text-sm text-purple-600 hover:text-purple-700"
+                                  onClick={() => handleAcceptRequest(request.id)}
+                                  className="provider-accept-btn"
                                 >
-                                  {requestReviews[request.id] === null ? 'No review yet' : 'Load review...'}
+                                  <Check className="provider-action-icon" />
+                                  Accept
                                 </button>
-                              )}
-                            </div>
-                          )}
+                                <button
+                                  onClick={() => {
+                                    setSelectedRequestForReject(request);
+                                    setShowRejectDialog(true);
+                                  }}
+                                  className="provider-reject-btn"
+                                >
+                                  <X className="provider-action-icon" />
+                                  Reject
+                                </button>
+                              </div>
+                            )}
 
-                          {request.status === 1 && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleAcceptRequest(request.id)}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                              >
-                                <Check className="w-4 h-4" />
-                                Accept
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedRequestForReject(request);
-                                  setShowRejectDialog(true);
-                                }}
-                                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                              >
-                                <X className="w-4 h-4" />
-                                Reject
-                              </button>
-                            </div>
-                          )}
-                          {/* Payment Pending - show waiting button, hide Start Job */}
-                          {(Number(request.status) === STATUS.PaymentPending) && (
-                            <div className="flex gap-2">
-                              <button
-                                className="flex items-center gap-2 px-4 py-2 bg-gray-400 text-gray-700 rounded-lg cursor-not-allowed"
-                                disabled
-                                title="Please wait until payment is confirmed"
-                              >
-                                <Clock className="w-4 h-4" />
-                                Waiting for Payment
-                              </button>
-                            </div>
-                          )}
-                          {/* Start Job - visible when Paid (and NOT PaymentPending) */}
-                          {canStartRequest(request) && Number(request.status) !== STATUS.PaymentPending && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleStartJob(request.id)}
-                                disabled={loadingStartJobId === request.id}
-                                className={`flex items-center gap-2 px-4 py-2  text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-                                  style={{ opacity: 1, visibility: 'visible', backgroundColor:'#1E90FF' }}
-                              >
-                                {loadingStartJobId === request.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Check className="w-4 h-4" />
-                                )}
-                                {loadingStartJobId === request.id ? 'Starting...' : 'Start Job'}
-                              </button>
-                            </div>
-                          )}
+                            {(Number(request.status) === STATUS.PaymentPending) && (
+                              <div className="provider-request-actions">
+                                <button
+                                  className="provider-waiting-btn"
+                                  disabled
+                                  title="Please wait until payment is confirmed"
+                                >
+                                  <Clock className="provider-action-icon" />
+                                  Waiting for Payment
+                                </button>
+                              </div>
+                            )}
 
-                          {/* Complete Job - visible when InProgress / InProcess */}
-                          {canCompleteRequest(request) && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleCompleteJob(request.id)}
-                                disabled={loadingCompleteJobId === request.id}
-                                className={`flex items-center gap-2 px-4 py-2  text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-                                style={{ opacity: 1, visibility: 'visible',backgroundColor:'#22c55e' }}
-                              >
-                                {loadingCompleteJobId === request.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Check className="w-4 h-4" />
-                                )}
-                                {loadingCompleteJobId === request.id ? 'Completing...' : 'Complete Job'}
-                              </button>
-                            </div>
-                          )}
+                            {canStartRequest(request) && Number(request.status) !== STATUS.PaymentPending && (
+                              <div className="provider-request-actions">
+                                <button
+                                  onClick={() => handleStartJob(request.id)}
+                                  disabled={loadingStartJobId === request.id}
+                                  className="provider-start-btn"
+                                >
+                                  {loadingStartJobId === request.id ? (
+                                    <Loader2 className="provider-action-icon provider-action-icon-spin" />
+                                  ) : (
+                                    <Check className="provider-action-icon" />
+                                  )}
+                                  {loadingStartJobId === request.id ? 'Starting...' : 'Start Job'}
+                                </button>
+                              </div>
+                            )}
+
+                            {canCompleteRequest(request) && (
+                              <div className="provider-request-actions">
+                                <button
+                                  onClick={() => handleCompleteJob(request.id)}
+                                  disabled={loadingCompleteJobId === request.id}
+                                  className="provider-complete-btn"
+                                >
+                                  {loadingCompleteJobId === request.id ? (
+                                    <Loader2 className="provider-action-icon provider-action-icon-spin" />
+                                  ) : (
+                                    <Check className="provider-action-icon" />
+                                  )}
+                                  {loadingCompleteJobId === request.id ? 'Completing...' : 'Complete Job'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                     {providerRequests.length === 0 && (
-                      <p className="text-center text-gray-500 py-8">No requests yet</p>
+                      <p className="provider-empty-state">No requests yet</p>
                     )}
                   </div>
                 )}
               </div>
             )}
 
+            {/* Earnings Tab */}
             {activeTab === 'earnings' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-6 text-gray-900">Earnings Overview</h3>
-                  <div className="grid md:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl">
-                      <p className="text-sm mb-2 opacity-90">Total Earnings</p>
-                      <p className="text-4xl">${totalEarnings}</p>
+              <div className="provider-earnings-content">
+                <div className="provider-section-card">
+                  <h3 className="provider-section-title">Earnings Overview</h3>
+                  <div className="provider-earnings-grid">
+                    <div className="provider-earnings-card provider-earnings-total">
+                      <p className="provider-earnings-label">Total Earnings</p>
+                      <p className="provider-earnings-value">${totalEarnings}</p>
                     </div>
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl">
-                      <p className="text-sm mb-2 opacity-90">Completed Jobs</p>
-                      <p className="text-4xl">{completedJobs}</p>
+                    <div className="provider-earnings-card provider-earnings-jobs">
+                      <p className="provider-earnings-label">Completed Jobs</p>
+                      <p className="provider-earnings-value">{completedJobs}</p>
                     </div>
                   </div>
-                  
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">Current Month</p>
-                      <p className="text-2xl text-gray-900">${dashboardData?.statistics.currentMonthEarnings || 0}</p>
+
+                  <div className="provider-earnings-details">
+                    <div className="provider-earnings-card provider-earnings-current">
+                      <p className="provider-earnings-label">Current Month</p>
+                      <p className="provider-earnings-value">${dashboardData?.statistics.currentMonthEarnings || 0}</p>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">Worked Days</p>
-                      <p className="text-2xl text-gray-900">{dashboardData?.statistics.workedDays || 0}</p>
+                    <div className="provider-earnings-card provider-earnings-worked">
+                      <p className="provider-earnings-label">Worked Days</p>
+                      <p className="provider-earnings-value">{dashboardData?.statistics.workedDays || 0}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="mb-4 text-gray-900">Transaction History</h3>
+                <div className="provider-section-card">
+                  <h3 className="provider-section-title">Transaction History</h3>
                   {upcomingJobs.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="provider-transactions-list">
                       {upcomingJobs.map(job => (
                         <div
                           key={job.id}
-                          className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg"
+                          className="provider-transaction-item"
                         >
-                          <div>
-                            <p className="text-gray-900">{job.clientName}</p>
-                            <p className="text-sm text-gray-600">
+                          <div className="provider-transaction-info">
+                            <p className="provider-transaction-client">{job.clientName}</p>
+                            <p className="provider-transaction-meta">
                               {new Date(job.preferredDate).toLocaleDateString()} - {job.shiftTypeName}
                             </p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xl text-gray-900">${job.price}</p>
-                            <Badge variant="secondary" className="mt-1">{job.statusText}</Badge>
+                          <div className="provider-transaction-details">
+                            <p className="provider-transaction-price">${job.price}</p>
+                            <Badge variant="secondary" className="provider-transaction-badge">{job.statusText}</Badge>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-center text-gray-500 py-8">No transactions yet</p>
+                    <p className="provider-empty-state">No transactions yet</p>
                   )}
                 </div>
               </div>
@@ -1649,44 +1705,52 @@ const statusStyles = {
         </div>
       </div>
 
-      {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Request</DialogTitle>
-            <DialogDescription>Provide a reason for rejecting this service request</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              Please provide a reason for rejecting this request. This will be shown to the client.
-            </p>
-            <Textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="e.g., Schedule conflict, outside work area, etc..."
-              rows={4}
-              className="focus:border-[#FFA726]"
-            />
-            <div className="flex gap-2 justify-end">
+      {/* Custom Reject Modal - Replaced Dialog with div */}
+      {showRejectDialog && (
+        <div className="provider-modal-overlay">
+          <div className="provider-modal">
+            <div className="provider-modal-header">
+              <h3 className="provider-modal-title">Reject Request</h3>
+              <p className="provider-modal-description">Provide a reason for rejecting this service request</p>
               <button
-                onClick={() => {
-                  setShowRejectDialog(false);
-                  setRejectionReason('');
-                }}
-                className="px-4 py-2 border-2 border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                onClick={() => setShowRejectDialog(false)}
+                className="provider-modal-close-btn"
               >
-                Cancel
-              </button>
-              <button
-                onClick={handleRejectRequest}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Confirm Rejection
+                <X className="provider-modal-close-icon" />
               </button>
             </div>
+            <div className="provider-modal-content">
+              <p className="provider-reject-description">
+                Please provide a reason for rejecting this request. This will be shown to the client.
+              </p>
+              <Textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="e.g., Schedule conflict, outside work area, etc..."
+                rows={4}
+                className="provider-reject-textarea"
+              />
+              <div className="provider-reject-actions">
+                <button
+                  onClick={() => {
+                    setShowRejectDialog(false);
+                    setRejectionReason('');
+                  }}
+                  className="provider-cancel-btn"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRejectRequest}
+                  className="provider-confirm-reject-btn"
+                >
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }

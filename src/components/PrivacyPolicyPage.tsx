@@ -1,4 +1,5 @@
 import { Heart, ArrowLeft } from 'lucide-react';
+import '../styles/PrivacyPolicyPage.css';
 
 interface PrivacyPolicyPageProps {
   navigate: (page: string) => void;
@@ -6,63 +7,63 @@ interface PrivacyPolicyPageProps {
 
 export function PrivacyPolicyPage({ navigate }: PrivacyPolicyPageProps) {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="privacy-policy-page">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="privacy-policy-header">
+        <div className="privacy-policy-header-inner">
           <button
             onClick={() => navigate('landing')}
-            className="flex items-center gap-2 text-gray-600 hover:text-[#FFA726] transition-colors"
+            className="privacy-policy-back-btn"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="privacy-policy-back-icon" />
             Back to Home
           </button>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-[#E3F2FD] to-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="mb-6 text-gray-900">Privacy Policy</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+      <section className="privacy-policy-hero">
+        <div className="privacy-policy-hero-content">
+          <h1 className="privacy-policy-title">Privacy Policy</h1>
+          <p className="privacy-policy-date">
             Last updated: October 25, 2025
           </p>
         </div>
       </section>
 
       {/* Content */}
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div>
-            <h2 className="mb-4 text-gray-900">Introduction</h2>
-            <p className="text-gray-600 mb-4">
+      <section className="privacy-policy-content">
+        <div className="privacy-policy-container">
+          <div className="privacy-policy-section">
+            <h2 className="privacy-policy-section-title">Introduction</h2>
+            <p className="privacy-policy-text">
               At CarePro, we take your privacy seriously. This Privacy Policy explains how we collect, use,
               disclose, and safeguard your information when you use our platform.
             </p>
-            <p className="text-gray-600">
+            <p className="privacy-policy-text">
               Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy,
               please do not access the platform.
             </p>
           </div>
 
-          <div>
-            <h2 className="mb-4 text-gray-900">Information We Collect</h2>
-            <h3 className="mb-3 text-gray-900">Personal Information</h3>
-            <p className="text-gray-600 mb-4">
+          <div className="privacy-policy-section">
+            <h2 className="privacy-policy-section-title">Information We Collect</h2>
+            <h3 className="privacy-policy-subtitle">Personal Information</h3>
+            <p className="privacy-policy-text">
               We collect personal information that you provide to us when registering for an account, including:
             </p>
-            <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
+            <ul className="privacy-policy-list">
               <li>Name, email address, and phone number</li>
               <li>Address and location information</li>
               <li>Payment information (processed securely through our payment processor)</li>
               <li>For providers: Professional credentials, certifications, work experience, and identification documents</li>
             </ul>
 
-            <h3 className="mb-3 text-gray-900">Usage Information</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="privacy-policy-subtitle">Usage Information</h3>
+            <p className="privacy-policy-text">
               We automatically collect certain information when you use our platform:
             </p>
-            <ul className="list-disc list-inside text-gray-600 space-y-2">
+            <ul className="privacy-policy-list">
               <li>Browser and device information</li>
               <li>IP address and location data</li>
               <li>Pages visited and actions taken on the platform</li>
@@ -70,12 +71,12 @@ export function PrivacyPolicyPage({ navigate }: PrivacyPolicyPageProps) {
             </ul>
           </div>
 
-          <div>
-            <h2 className="mb-4 text-gray-900">How We Use Your Information</h2>
-            <p className="text-gray-600 mb-4">
+          <div className="privacy-policy-section">
+            <h2 className="privacy-policy-section-title">How We Use Your Information</h2>
+            <p className="privacy-policy-text">
               We use the information we collect to:
             </p>
-            <ul className="list-disc list-inside text-gray-600 space-y-2">
+            <ul className="privacy-policy-list">
               <li>Provide, maintain, and improve our services</li>
               <li>Process bookings and payments</li>
               <li>Verify caregiver credentials and conduct background checks</li>
@@ -86,29 +87,29 @@ export function PrivacyPolicyPage({ navigate }: PrivacyPolicyPageProps) {
             </ul>
           </div>
 
-          <div>
-            <h2 className="mb-4 text-gray-900">Information Sharing</h2>
-            <p className="text-gray-600 mb-4">
+          <div className="privacy-policy-section">
+            <h2 className="privacy-policy-section-title">Information Sharing</h2>
+            <p className="privacy-policy-text">
               We may share your information in the following circumstances:
             </p>
-            <ul className="list-disc list-inside text-gray-600 space-y-2">
+            <ul className="privacy-policy-list">
               <li>With caregivers when you book services (name, address, contact information)</li>
               <li>With service providers who help us operate our platform (payment processors, hosting services)</li>
               <li>When required by law or to protect our rights</li>
               <li>With your consent or at your direction</li>
             </ul>
-            <p className="text-gray-600 mt-4">
+            <p className="privacy-policy-text">
               We do not sell your personal information to third parties.
             </p>
           </div>
 
-          <div>
-            <h2 className="mb-4 text-gray-900">Data Security</h2>
-            <p className="text-gray-600 mb-4">
+          <div className="privacy-policy-section">
+            <h2 className="privacy-policy-section-title">Data Security</h2>
+            <p className="privacy-policy-text">
               We implement appropriate technical and organizational security measures to protect your personal
               information against unauthorized access, alteration, disclosure, or destruction. These measures include:
             </p>
-            <ul className="list-disc list-inside text-gray-600 space-y-2">
+            <ul className="privacy-policy-list">
               <li>Encryption of sensitive data in transit and at rest</li>
               <li>Regular security assessments and updates</li>
               <li>Access controls and authentication</li>
@@ -116,54 +117,54 @@ export function PrivacyPolicyPage({ navigate }: PrivacyPolicyPageProps) {
             </ul>
           </div>
 
-          <div>
-            <h2 className="mb-4 text-gray-900">Your Rights</h2>
-            <p className="text-gray-600 mb-4">
+          <div className="privacy-policy-section">
+            <h2 className="privacy-policy-section-title">Your Rights</h2>
+            <p className="privacy-policy-text">
               You have the right to:
             </p>
-            <ul className="list-disc list-inside text-gray-600 space-y-2">
+            <ul className="privacy-policy-list">
               <li>Access and review your personal information</li>
               <li>Correct inaccurate or incomplete information</li>
               <li>Request deletion of your personal information</li>
               <li>Opt-out of marketing communications</li>
               <li>Export your data in a portable format</li>
             </ul>
-            <p className="text-gray-600 mt-4">
+            <p className="privacy-policy-text">
               To exercise these rights, please contact us at privacy@carepro.com
             </p>
           </div>
 
-          <div>
-            <h2 className="mb-4 text-gray-900">Cookies and Tracking</h2>
-            <p className="text-gray-600">
+          <div className="privacy-policy-section">
+            <h2 className="privacy-policy-section-title">Cookies and Tracking</h2>
+            <p className="privacy-policy-text">
               We use cookies and similar tracking technologies to track activity on our platform and hold certain
               information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent.
             </p>
           </div>
 
-          <div>
-            <h2 className="mb-4 text-gray-900">Children's Privacy</h2>
-            <p className="text-gray-600">
+          <div className="privacy-policy-section">
+            <h2 className="privacy-policy-section-title">Children's Privacy</h2>
+            <p className="privacy-policy-text">
               Our platform is not intended for children under 18 years of age. We do not knowingly collect personal
               information from children under 18. If you believe we have collected information from a child, please
               contact us immediately.
             </p>
           </div>
 
-          <div>
-            <h2 className="mb-4 text-gray-900">Changes to This Policy</h2>
-            <p className="text-gray-600">
+          <div className="privacy-policy-section">
+            <h2 className="privacy-policy-section-title">Changes to This Policy</h2>
+            <p className="privacy-policy-text">
               We may update this Privacy Policy from time to time. We will notify you of any changes by posting the
               new Privacy Policy on this page and updating the "Last updated" date.
             </p>
           </div>
 
-          <div>
-            <h2 className="mb-4 text-gray-900">Contact Us</h2>
-            <p className="text-gray-600 mb-4">
+          <div className="privacy-policy-section">
+            <h2 className="privacy-policy-section-title">Contact Us</h2>
+            <p className="privacy-policy-text">
               If you have questions about this Privacy Policy, please contact us:
             </p>
-            <ul className="text-gray-600 space-y-2">
+            <ul className="privacy-policy-contact-list">
               <li>Email: privacy@carepro.com</li>
               <li>Phone: +1 (555) 123-4567</li>
               <li>Address: 123 Care Street, New York, NY 10001</li>
@@ -173,13 +174,13 @@ export function PrivacyPolicyPage({ navigate }: PrivacyPolicyPageProps) {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Heart className="w-6 h-6 text-[#FFA726]" />
-            <span className="text-xl">CarePro</span>
+      <footer className="privacy-policy-footer">
+        <div className="privacy-policy-footer-content">
+          <div className="privacy-policy-footer-logo">
+            <Heart className="privacy-policy-heart-icon" />
+            <span className="privacy-policy-footer-brand">CarePro</span>
           </div>
-          <p className="text-gray-400">&copy; 2025 CarePro. All rights reserved.</p>
+          <p className="privacy-policy-footer-copyright">&copy; 2025 CarePro. All rights reserved.</p>
         </div>
       </footer>
     </div>

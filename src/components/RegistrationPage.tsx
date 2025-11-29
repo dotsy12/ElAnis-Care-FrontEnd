@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, ArrowLeft, User, Briefcase, Mail, Phone, MapPin, Lock, Calendar, FileText, Upload, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
+import '../styles/RegistrationPage.css';
 
 interface RegistrationPageProps {
   navigate: (page: string, data?: any) => void;
@@ -178,60 +179,60 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
 
   if (step === 'type') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#E3F2FD] to-white flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl">
+      <div className="registration-container">
+        <div className="registration-wrapper">
           <button
             onClick={() => navigate('landing')}
-            className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            className="back-button"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="back-icon" />
             Back to Home
           </button>
 
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-[#FFA726] rounded-full flex items-center justify-center">
-                <Heart className="w-8 h-8 text-white" />
+          <div className="registration-card">
+            <div className="logo-container">
+              <div className="logo-circle">
+                <Heart className="logo-icon" />
               </div>
             </div>
 
-            <h2 className="text-center mb-2 text-gray-900">Create Your Account</h2>
-            <p className="text-center text-gray-600 mb-12">Choose your account type to get started</p>
+            <h2 className="registration-title">Create Your Account</h2>
+            <p className="registration-subtitle">Choose your account type to get started</p>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="account-type-grid">
               <button
                 onClick={() => handleTypeSelect('user')}
-                className="p-8 border-3 border-gray-200 rounded-xl hover:border-[#FFA726] hover:bg-[#E3F2FD] transition-all group"
+                className="account-type-card account-type-user"
               >
-                <div className="w-20 h-20 bg-[#E3F2FD] group-hover:bg-white rounded-full flex items-center justify-center mx-auto mb-4">
-                  <User className="w-10 h-10 text-[#FFA726]" />
+                <div className="account-type-icon-container">
+                  <User className="account-type-icon" />
                 </div>
-                <h3 className="mb-3 text-gray-900">I am a User</h3>
-                <p className="text-gray-600">
+                <h3 className="account-type-title">I am a User</h3>
+                <p className="account-type-description">
                   Looking for trusted caregivers for my family members or home care services.
                 </p>
               </button>
 
               <button
                 onClick={() => handleTypeSelect('provider')}
-                className="p-8 border-3 border-gray-200 rounded-xl hover:border-[#FFA726] hover:bg-[#E3F2FD] transition-all group"
+                className="account-type-card account-type-provider"
               >
-                <div className="w-20 h-20 bg-[#E3F2FD] group-hover:bg-white rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Briefcase className="w-10 h-10 text-[#FFA726]" />
+                <div className="account-type-icon-container">
+                  <Briefcase className="account-type-icon" />
                 </div>
-                <h3 className="mb-3 text-gray-900">I am a Care Provider</h3>
-                <p className="text-gray-600">
+                <h3 className="account-type-title">I am a Care Provider</h3>
+                <p className="account-type-description">
                   Professional caregiver, nurse, or nanny offering quality care services.
                 </p>
               </button>
             </div>
 
-            <div className="mt-8 text-center">
-              <p className="text-gray-600">
+            <div className="login-redirect">
+              <p className="login-text">
                 Already have an account?{' '}
                 <button
                   onClick={() => navigate('login')}
-                  className="text-[#FFA726] hover:underline"
+                  className="login-link"
                 >
                   Login here
                 </button>
@@ -244,54 +245,54 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#E3F2FD] to-white py-8 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="registration-form-container">
+      <div className="registration-form-wrapper">
         <button
           onClick={() => setStep('type')}
-          className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          className="back-button"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="back-icon" />
           Back
         </button>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="mb-2 text-gray-900">
+        <div className="registration-form-card">
+          <h2 className="form-title">
             {accountType === 'user' ? 'User Registration' : 'Provider Registration'}
           </h2>
-          <p className="text-gray-600 mb-8">
+          <p className="form-subtitle">
             {accountType === 'user' 
               ? 'Fill in your details to create your account'
               : 'Complete your professional profile to get started'
             }
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="registration-form">
             {/* Common Fields */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block mb-2 text-gray-700">First Name *</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="form-row">
+              <div className="form-field">
+                <label className="field-label">First Name *</label>
+                <div className="input-container">
+                  <User className="input-icon" />
                   <input
                     type="text"
                     value={formData.firstName}
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    className="form-input"
                     placeholder="John"
                     required
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block mb-2 text-gray-700">Last Name *</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <div className="form-field">
+                <label className="field-label">Last Name *</label>
+                <div className="input-container">
+                  <User className="input-icon" />
                   <input
                     type="text"
                     value={formData.lastName}
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    className="form-input"
                     placeholder="Doe"
                     required
                   />
@@ -299,31 +300,31 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block mb-2 text-gray-700">Email Address *</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="form-row">
+              <div className="form-field">
+                <label className="field-label">Email Address *</label>
+                <div className="input-container">
+                  <Mail className="input-icon" />
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    className="form-input"
                     placeholder="your@email.com"
                     required
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block mb-2 text-gray-700">Phone Number *</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <div className="form-field">
+                <label className="field-label">Phone Number *</label>
+                <div className="input-container">
+                  <Phone className="input-icon" />
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    className="form-input"
                     placeholder="+1 (555) 123-4567"
                     required
                   />
@@ -331,31 +332,31 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block mb-2 text-gray-700">Address *</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="form-row">
+              <div className="form-field">
+                <label className="field-label">Address *</label>
+                <div className="input-container">
+                  <MapPin className="input-icon" />
                   <input
                     type="text"
                     value={formData.address}
                     onChange={(e) => handleInputChange('address', e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    className="form-input"
                     placeholder="123 Main St, City"
                     required
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block mb-2 text-gray-700">Date of Birth *</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <div className="form-field">
+                <label className="field-label">Date of Birth *</label>
+                <div className="input-container">
+                  <Calendar className="input-icon" />
                   <input
                     type="date"
                     value={formData.dob}
                     onChange={(e) => handleInputChange('dob', e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    className="form-input"
                     required
                   />
                 </div>
@@ -365,31 +366,31 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
             {/* Provider-specific Fields */}
             {accountType === 'provider' && (
               <>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block mb-2 text-gray-700">National ID *</label>
-                    <div className="relative">
-                      <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div className="form-row">
+                  <div className="form-field">
+                    <label className="field-label">National ID *</label>
+                    <div className="input-container">
+                      <FileText className="input-icon" />
                       <input
                         type="text"
                         value={formData.nationalId}
                         onChange={(e) => handleInputChange('nationalId', e.target.value)}
-                        className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                        className="form-input"
                         placeholder="National ID Number"
                         required
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block mb-2 text-gray-700">Hourly Rate ($/hr) *</label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <div className="form-field">
+                    <label className="field-label">Hourly Rate ($/hr) *</label>
+                    <div className="input-container">
+                      <DollarSign className="input-icon" />
                       <input
                         type="number"
                         value={formData.hourlyRate}
                         onChange={(e) => handleInputChange('hourlyRate', e.target.value)}
-                        className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                        className="form-input"
                         placeholder="25"
                         min="1"
                         step="0.01"
@@ -399,36 +400,36 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block mb-2 text-gray-700">Experience Details *</label>
+                <div className="form-field-full">
+                  <label className="field-label">Experience Details *</label>
                   <textarea
                     value={formData.experience}
                     onChange={(e) => handleInputChange('experience', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    className="form-textarea"
                     rows={3}
                     placeholder="Describe your experience in detail (minimum 20 characters)..."
                     minLength={20}
                     required
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="character-count">
                     {formData.experience.length}/20 characters minimum
                   </p>
                 </div>
 
-                <div>
-                  <label className="block mb-2 text-gray-700">Service Category *</label>
+                <div className="form-field-full">
+                  <label className="field-label">Service Category *</label>
                   {isLoadingCategories ? (
-                    <div className="flex justify-center p-8 border-2 border-gray-200 rounded-lg">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FFA726]"></div>
+                    <div className="loading-container">
+                      <div className="loading-spinner"></div>
                     </div>
                   ) : categories.length === 0 ? (
-                    <div className="p-4 border-2 border-red-200 bg-red-50 rounded-lg text-center">
-                      <p className="text-red-600">Failed to load categories. Please refresh the page.</p>
+                    <div className="error-container">
+                      <p className="error-message">Failed to load categories. Please refresh the page.</p>
                     </div>
                   ) : (
-                    <div className="space-y-3 p-4 border-2 border-gray-200 rounded-lg">
+                    <div className="categories-container">
                       {categories.map((category) => (
-                        <label key={category.id} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-3 rounded transition-colors">
+                        <label key={category.id} className="category-item">
                           <input
                             type="radio"
                             name="category"
@@ -440,15 +441,15 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                                 selectedCategory: e.target.value
                               }));
                             }}
-                            className="w-4 h-4 text-[#FFA726] border-gray-300 focus:ring-[#FFA726]"
+                            className="category-radio"
                             required
                           />
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl">{category.icon || '📋'}</span>
-                            <div>
-                              <span className="text-gray-900 font-medium">{category.name}</span>
+                          <div className="category-content">
+                            <span className="category-icon">{category.icon || '📋'}</span>
+                            <div className="category-info">
+                              <span className="category-name">{category.name}</span>
                               {category.description && (
-                                <p className="text-xs text-gray-500">{category.description}</p>
+                                <p className="category-description">{category.description}</p>
                               )}
                             </div>
                           </div>
@@ -457,29 +458,29 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                     </div>
                   )}
                   {!isLoadingCategories && !formData.selectedCategory && (
-                    <p className="text-sm text-red-500 mt-1">Please select a service category</p>
+                    <p className="field-error">Please select a service category</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block mb-2 text-gray-700">Professional Bio *</label>
+                <div className="form-field-full">
+                  <label className="field-label">Professional Bio *</label>
                   <textarea
                     value={formData.bio}
                     onChange={(e) => handleInputChange('bio', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    className="form-textarea"
                     rows={4}
                     placeholder="Tell us about your experience, skills, and why you're passionate about caregiving..."
                     required
                   />
                 </div>
 
-                <div>
-                  <label className="block mb-2 text-gray-700">Upload ID Document *</label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#FFA726] transition-colors">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <label className="cursor-pointer">
-                      <span className="text-[#FFA726] hover:underline">Click to upload</span>
-                      <span className="text-gray-600"> ID document</span>
+                <div className="form-field-full">
+                  <label className="field-label">Upload ID Document *</label>
+                  <div className="file-upload-container">
+                    <Upload className="upload-icon" />
+                    <label className="file-upload-label">
+                      <span className="upload-link">Click to upload</span>
+                      <span className="upload-text"> ID document</span>
                       <input
                         type="file"
                         accept=".pdf,.jpg,.jpeg,.png"
@@ -489,54 +490,54 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                             toast.success('ID document uploaded');
                           }
                         }}
-                        className="hidden"
+                        className="file-input"
                         required
                       />
                     </label>
                     {idDocument && (
-                      <p className="text-sm text-gray-600 mt-2">{idDocument.name}</p>
+                      <p className="file-name">{idDocument.name}</p>
                     )}
                   </div>
                 </div>
 
-                <div>
-                  <label className="block mb-2 text-gray-700">Upload Certificate *</label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#FFA726] transition-colors">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <label className="cursor-pointer">
-                      <span className="text-[#FFA726] hover:underline">Click to upload</span>
-                      <span className="text-gray-600"> certificate</span>
+                <div className="form-field-full">
+                  <label className="field-label">Upload Certificate *</label>
+                  <div className="file-upload-container">
+                    <Upload className="upload-icon" />
+                    <label className="file-upload-label">
+                      <span className="upload-link">Click to upload</span>
+                      <span className="upload-text"> certificate</span>
                       <input
                         type="file"
                         accept=".pdf,.jpg,.jpeg,.png"
                         onChange={(e) => handleFileUpload('certificates', e.target.files)}
-                        className="hidden"
+                        className="file-input"
                         required
                       />
                     </label>
                     {certificates.length > 0 && (
-                      <p className="text-sm text-gray-600 mt-2">{certificates[0].name}</p>
+                      <p className="file-name">{certificates[0].name}</p>
                     )}
                   </div>
                 </div>
 
-                <div>
-                  <label className="block mb-2 text-gray-700">Upload CV/Resume *</label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#FFA726] transition-colors">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <label className="cursor-pointer">
-                      <span className="text-[#FFA726] hover:underline">Click to upload</span>
-                      <span className="text-gray-600"> your CV</span>
+                <div className="form-field-full">
+                  <label className="field-label">Upload CV/Resume *</label>
+                  <div className="file-upload-container">
+                    <Upload className="upload-icon" />
+                    <label className="file-upload-label">
+                      <span className="upload-link">Click to upload</span>
+                      <span className="upload-text"> your CV</span>
                       <input
                         type="file"
                         accept=".pdf,.doc,.docx"
                         onChange={(e) => handleFileUpload('cv', e.target.files)}
-                        className="hidden"
+                        className="file-input"
                         required
                       />
                     </label>
                     {cv && (
-                      <p className="text-sm text-gray-600 mt-2">{cv.name}</p>
+                      <p className="file-name">{cv.name}</p>
                     )}
                   </div>
                 </div>
@@ -544,31 +545,31 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
             )}
 
             {/* Password Fields */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block mb-2 text-gray-700">Password *</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="form-row">
+              <div className="form-field">
+                <label className="field-label">Password *</label>
+                <div className="input-container">
+                  <Lock className="input-icon" />
                   <input
                     type="password"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    className="form-input"
                     placeholder="Enter password"
                     required
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block mb-2 text-gray-700">Confirm Password *</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <div className="form-field">
+                <label className="field-label">Confirm Password *</label>
+                <div className="input-container">
+                  <Lock className="input-icon" />
                   <input
                     type="password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-[#FFA726] focus:outline-none"
+                    className="form-input"
                     placeholder="Confirm password"
                     required
                   />
@@ -579,9 +580,7 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-4 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors ${
-                isLoading ? 'opacity-70 cursor-not-allowed' : ''
-              }`}
+              className={`submit-button ${isLoading ? 'submit-button-loading' : ''}`}
             >
               {isLoading
                 ? 'Registering...'
@@ -592,8 +591,8 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
           </form>
 
           {accountType === 'provider' && (
-            <div className="mt-6 p-4 bg-orange-50 border-2 border-orange-200 rounded-lg">
-              <p className="text-sm text-orange-800">
+            <div className="approval-notice">
+              <p className="approval-text">
                 <strong>Note:</strong> Your profile will be reviewed by our admin team. You'll be notified once approved.
               </p>
             </div>

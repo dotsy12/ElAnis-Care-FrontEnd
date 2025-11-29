@@ -1,19 +1,35 @@
-import { Heart, ArrowLeft } from 'lucide-react';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from './ui/accordion';
+import { useState } from 'react';
+import { Heart, ArrowLeft, MessageCircle, Search, User, Shield, CreditCard, Clock, Star, ChevronDown, ChevronUp, Phone, Mail } from 'lucide-react';
+import CountUp from 'react-countup';
+import '../styles/FAQPage.css';
 
 interface FAQPageProps {
   navigate: (page: string) => void;
 }
 
 export function FAQPage({ navigate }: FAQPageProps) {
+  const [openCategory, setOpenCategory] = useState<string | null>('General');
+  const [openQuestions, setOpenQuestions] = useState<Set<string>>(new Set(['0-0']));
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const toggleCategory = (category: string) => {
+    setOpenCategory(openCategory === category ? null : category);
+  };
+
+  const toggleQuestion = (questionId: string) => {
+    const newOpenQuestions = new Set(openQuestions);
+    if (newOpenQuestions.has(questionId)) {
+      newOpenQuestions.delete(questionId);
+    } else {
+      newOpenQuestions.add(questionId);
+    }
+    setOpenQuestions(newOpenQuestions);
+  };
+
   const faqs = [
     {
       category: 'General',
+      icon: MessageCircle,
       questions: [
         {
           q: 'What is CarePro?',
@@ -31,6 +47,7 @@ export function FAQPage({ navigate }: FAQPageProps) {
     },
     {
       category: 'For Users',
+      icon: User,
       questions: [
         {
           q: 'How do I book a caregiver?',
@@ -52,6 +69,7 @@ export function FAQPage({ navigate }: FAQPageProps) {
     },
     {
       category: 'For Providers',
+      icon: Shield,
       questions: [
         {
           q: 'How do I become a caregiver on CarePro?',
@@ -77,6 +95,7 @@ export function FAQPage({ navigate }: FAQPageProps) {
     },
     {
       category: 'Safety & Privacy',
+      icon: Shield,
       questions: [
         {
           q: 'How is my personal information protected?',
@@ -94,6 +113,7 @@ export function FAQPage({ navigate }: FAQPageProps) {
     },
     {
       category: 'Pricing',
+      icon: CreditCard,
       questions: [
         {
           q: 'What are the shift types and pricing?',
@@ -111,79 +131,227 @@ export function FAQPage({ navigate }: FAQPageProps) {
     },
   ];
 
+  const filteredFaqs = faqs.map(section => ({
+    ...section,
+    questions: section.questions.filter(question =>
+      question.q.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.a.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  })).filter(section => section.questions.length > 0);
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="faq-page">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="faq-header">
+        <div className="faq-header-container">
           <button
             onClick={() => navigate('landing')}
-            className="flex items-center gap-2 text-gray-600 hover:text-[#FFA726] transition-colors"
+            className="back-button"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="button-icon" />
             Back to Home
           </button>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-[#E3F2FD] to-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="mb-6 text-gray-900">Frequently Asked Questions</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Find answers to common questions about our platform, services, and policies.
-          </p>
+      <section className="faq-hero">
+        <div className="hero-background">
+          <div className="hero-bg-circle-1"></div>
+          <div className="hero-bg-circle-2"></div>
+        </div>
+        <div className="faq-hero-container">
+          <div className="faq-hero-content">
+            <div className="trust-badge">
+              <div className="pulse-dot"></div>
+              <span>Find Answers Quickly</span>
+            </div>
+            <h1 className="faq-hero-title">Frequently Asked <span className="gradient-text">Questions</span></h1>
+            <p className="faq-hero-description">
+              Find answers to common questions about our platform, services, and policies.
+            </p>
+
+            <div className="search-container">
+              <Search className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search questions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+            </div>
+
+            <div className="hero-stats">
+              <div className="hero-stat">
+                <div className="stat-number">
+                  <CountUp end={18} duration={3} enableScrollSpy />+
+                </div>
+                <div className="stat-label">Common Questions</div>
+              </div>
+              <div className="hero-stat">
+                <div className="stat-number">
+                  <CountUp end={24} duration={3} enableScrollSpy />/7
+                </div>
+                <div className="stat-label">Support Available</div>
+              </div>
+              <div className="hero-stat">
+                <div className="stat-number">
+                  <CountUp end={98} duration={3} enableScrollSpy />%
+                </div>
+                <div className="stat-label">Answered Instantly</div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {faqs.map((section, idx) => (
-            <div key={idx} className="mb-12">
-              <h2 className="mb-6 text-gray-900">{section.category}</h2>
-              <Accordion type="single" collapsible className="space-y-4">
-                {section.questions.map((faq, qIdx) => (
-                  <AccordionItem
-                    key={qIdx}
-                    value={`${idx}-${qIdx}`}
-                    className="bg-white border-2 border-gray-200 rounded-lg px-6"
-                  >
-                    <AccordionTrigger className="text-left hover:no-underline">
-                      <span className="text-gray-900">{faq.q}</span>
-                    </AccordionTrigger>
-                    <AccordionContent className="text-gray-600">
-                      {faq.a}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+      <section className="faq-section">
+        <div className="container">
+          {filteredFaqs.length === 0 ? (
+            <div className="no-results">
+              <MessageCircle className="no-results-icon" />
+              <h3 className="no-results-title">No results found</h3>
+              <p className="no-results-description">
+                Try searching with different keywords or browse the categories below.
+              </p>
             </div>
-          ))}
+          ) : (
+            <div className="faq-categories">
+              {filteredFaqs.map((section, idx) => (
+                <div key={idx} className="faq-category">
+                  <button
+                    onClick={() => toggleCategory(section.category)}
+                    className="category-header"
+                  >
+                    <div className="category-title-container">
+                      <div className="category-icon">
+                        <section.icon className="icon" />
+                      </div>
+                      <h2 className="category-title">{section.category}</h2>
+                    </div>
+                    <div className="category-indicator">
+                      {openCategory === section.category ? (
+                        <ChevronUp className="indicator-icon" />
+                      ) : (
+                        <ChevronDown className="indicator-icon" />
+                      )}
+                    </div>
+                  </button>
 
-          <div className="mt-12 p-8 bg-[#E3F2FD] rounded-xl text-center">
-            <h3 className="mb-3 text-gray-900">Still have questions?</h3>
-            <p className="text-gray-600 mb-6">
-              Can't find the answer you're looking for? Our support team is here to help.
-            </p>
-            <button
-              onClick={() => navigate('contact')}
-              className="px-8 py-3 bg-[#FFA726] text-white rounded-lg hover:bg-[#FB8C00] transition-colors"
-            >
-              Contact Support
-            </button>
+                  {openCategory === section.category && (
+                    <div className="questions-container">
+                      {section.questions.map((faq, qIdx) => {
+                        const questionId = `${idx}-${qIdx}`;
+                        const isOpen = openQuestions.has(questionId);
+                        
+                        return (
+                          <div key={qIdx} className="question-item">
+                            <button
+                              onClick={() => toggleQuestion(questionId)}
+                              className="question-trigger"
+                            >
+                              <span className="question-text">{faq.q}</span>
+                              <div className="question-indicator">
+                                {isOpen ? (
+                                  <ChevronUp className="indicator-icon" />
+                                ) : (
+                                  <ChevronDown className="indicator-icon" />
+                                )}
+                              </div>
+                            </button>
+                            
+                            {isOpen && (
+                              <div className="question-answer">
+                                <p className="answer-text">{faq.a}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="support-cta">
+            <div className="cta-content">
+              <div className="cta-icon">
+                <MessageCircle className="icon" />
+              </div>
+              <div className="cta-text">
+                <h3 className="cta-title">Still have questions?</h3>
+                <p className="cta-description">
+                  Can't find the answer you're looking for? Our support team is here to help.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('contact')}
+                className="cta-button"
+              >
+                Contact Support
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Help Section */}
+      <section className="quick-help-section">
+        <div className="container">
+          <div className="section-header">
+            <div className="section-badge">
+              <Clock className="badge-icon" />
+              Quick Help
+            </div>
+            <h2 className="section-title">Need Immediate Assistance?</h2>
+            <p className="section-description">Get help quickly with these resources</p>
+          </div>
+
+          <div className="help-grid">
+            <div className="help-card">
+              <div className="help-icon">
+                <Phone className="icon" />
+              </div>
+              <h3 className="help-title">Call Support</h3>
+              <p className="help-description">Speak directly with our support team</p>
+              <div className="help-number">+1 (555) 123-4567</div>
+            </div>
+
+            <div className="help-card">
+              <div className="help-icon">
+                <Mail className="icon" />
+              </div>
+              <h3 className="help-title">Email Us</h3>
+              <p className="help-description">Send us your questions and concerns</p>
+              <div className="help-email">support@carepro.com</div>
+            </div>
+
+            <div className="help-card">
+              <div className="help-icon">
+                <MessageCircle className="icon" />
+              </div>
+              <h3 className="help-title">Live Chat</h3>
+              <p className="help-description">Chat with us in real-time</p>
+              <div className="help-status">Available 24/7</div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Heart className="w-6 h-6 text-[#FFA726]" />
-            <span className="text-xl">CarePro</span>
+      <footer className="faq-footer">
+        <div className="container">
+          <div className="footer-content">
+            <div className="footer-logo">
+              <Heart className="logo-icon" />
+              <span className="logo-text">CarePro</span>
+            </div>
+            <p className="footer-copyright">&copy; 2025 CarePro. All rights reserved. Built with ❤️ for better care.</p>
           </div>
-          <p className="text-gray-400">&copy; 2025 CarePro. All rights reserved.</p>
         </div>
       </footer>
     </div>
