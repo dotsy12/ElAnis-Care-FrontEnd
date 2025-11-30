@@ -75,7 +75,7 @@ function Calendar({
           --calendar-text: #0f172a;
           --calendar-muted: #64748b;
           --calendar-accent: #f1f5f9;
-          --calendar-primary: #2563eb;
+          --calendar-primary: #fb8c00;
           --calendar-primary-text: #fff;
         }
 
@@ -150,7 +150,7 @@ function Calendar({
           opacity: 1;
           color: var(--calendar-text);
           border-color: var(--calendar-text);
-          background: rgba(37, 99, 235, 0.08);
+          background: rgba(251, 140, 0, 0.08);
         }
 
         .calendar__nav-button--prev {
@@ -250,7 +250,7 @@ function Calendar({
           color: var(--calendar-primary-text);
           font-weight: 600;
           transform: translateY(-1px);
-          box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+          box-shadow: 0 6px 16px rgba(251, 140, 0, 0.35);
         }
 
         .calendar__day--range-start,
@@ -266,7 +266,7 @@ function Calendar({
         }
 
         .calendar__day--today {
-          background: rgba(37, 99, 235, 0.12);
+          background: rgba(251, 140, 0, 0.12);
           color: var(--calendar-primary);
           font-weight: 600;
         }

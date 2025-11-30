@@ -445,7 +445,7 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
                             required
                           />
                           <div className="category-content">
-                            <span className="category-icon">{category.icon || '📋'}</span>
+                            {/* <span className="category-icon">{category.icon || '📋'}</span> */}
                             <div className="category-info">
                               <span className="category-name">{category.name}</span>
                               {category.description && (
