@@ -17,7 +17,7 @@ export function LandingPage({ navigate }: LandingPageProps) {
             <div className="logo-icon">
               <Heart className="icon" />
             </div>
-            <span className="logo-text">CarePro</span>
+            <span className="logo-text">ElAnis Care</span>
           </div>
           <nav className="nav">
             <button onClick={() => navigate('about')} className="nav-button">

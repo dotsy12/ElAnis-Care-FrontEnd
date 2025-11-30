@@ -109,7 +109,7 @@ export function LoginPage({ navigate, onLogin }: LoginPageProps) {
           </div>
 
           <h2 className="login-title">Welcome Back</h2>
-          <p className="login-subtitle">Login to your CarePro account</p>
+          <p className="login-subtitle">Login to your ElAnis Care account</p>
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="login-input-group">

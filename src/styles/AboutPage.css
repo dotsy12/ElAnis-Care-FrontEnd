@@ -53,7 +53,8 @@
 }
 
 .container {
-  max-width: 80rem;
+  max-width: 800rem;
+  width: 100%;
   margin: 0 auto;
   padding: 0 1rem;
 }
@@ -183,9 +184,11 @@
   0% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
+
   100% {
     opacity: 1;
   }
@@ -613,13 +616,14 @@
 
 /* CTA Section */
 .about-cta {
+  width: 100%;
   padding: 5rem 0;
   background: linear-gradient(135deg, var(--color-orange-600), var(--color-orange-800));
   text-align: center;
 }
 
 .cta-content {
-  max-width: 48rem;
+  max-width: 500rem;
   margin: 0 auto;
 }
 
@@ -752,6 +756,7 @@
 }
 
 @media (min-width: 1024px) {
+
   .about-header-container,
   .about-hero-container,
   .container {

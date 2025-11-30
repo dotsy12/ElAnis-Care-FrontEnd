@@ -38,7 +38,7 @@ export function AboutPage({ navigate }: AboutPageProps) {
             <div className="about-hero-icon">
               <Heart className="icon" />
             </div>
-            <h1 className="about-hero-title">About <span className="gradient-text">CarePro</span></h1>
+            <h1 className="about-hero-title">About <span className="gradient-text">ElAnis Care</span></h1>
             <p className="about-hero-description">
               We're on a mission to connect families with trusted, qualified caregivers who provide compassionate,
               professional care services for elderly, children, and home healthcare needs.
@@ -73,7 +73,7 @@ export function AboutPage({ navigate }: AboutPageProps) {
               </div>
               <h2 className="mission-title">Transforming Care Through Technology and Compassion</h2>
               <p className="mission-description">
-                At CarePro, we believe everyone deserves access to quality, compassionate care. Our platform
+                At ElAnis Care, we believe everyone deserves access to quality, compassionate care. Our platform
                 bridges the gap between families seeking trusted caregivers and experienced professionals
                 dedicated to making a difference.
               </p>
@@ -122,7 +122,7 @@ export function AboutPage({ navigate }: AboutPageProps) {
                 Our Values
               </div>
               <h2 className="section-title">What Drives Us Every Day</h2>
-              <p className="section-description">Our core values shape everything we do at CarePro</p>
+              <p className="section-description">Our core values shape everything we do at ElAnis Care</p>
             </div>
 
             <div className="values-grid">
@@ -251,7 +251,7 @@ export function AboutPage({ navigate }: AboutPageProps) {
               <Users className="badge-icon" />
               Our Team
             </div>
-            <h2 className="section-title">Meet the People Behind CarePro</h2>
+            <h2 className="section-title">Meet the People Behind ElAnis Care</h2>
             <p className="section-description">Passionate professionals dedicated to revolutionizing care</p>
           </div>
 
@@ -302,7 +302,7 @@ export function AboutPage({ navigate }: AboutPageProps) {
       <section className="about-cta">
         <div className="container">
           <div className="cta-content">
-            <h2 className="cta-title">Ready to Experience the CarePro Difference?</h2>
+            <h2 className="cta-title">Ready to Experience the ElAnis Care Difference?</h2>
             <p className="cta-description">
               Join thousands of families who trust us for their care needs. Get started today and find your perfect caregiver match.
             </p>
@@ -330,9 +330,9 @@ export function AboutPage({ navigate }: AboutPageProps) {
           <div className="footer-content">
             <div className="footer-logo">
               <Heart className="logo-icon" />
-              <span className="logo-text">CarePro</span>
+              <span className="logo-text">ElAnis Care</span>
             </div>
-            <p className="footer-copyright">&copy; 2025 CarePro. All rights reserved. Built with ❤️ for better care.</p>
+            <p className="footer-copyright">&copy; 2025 ElAnis Care. All rights reserved. Built with ❤️ for better care.</p>
           </div>
         </div>
       </footer>
