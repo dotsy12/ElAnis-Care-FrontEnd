@@ -623,8 +623,13 @@
 }
 
 .cta-content {
-  max-width: 500rem;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  max-width: 500rem !important;
+  margin: 0 auto !important;
+  text-align: center !important;
 }
 
 .cta-title {
