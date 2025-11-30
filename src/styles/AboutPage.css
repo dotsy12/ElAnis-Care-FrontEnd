@@ -179,7 +179,7 @@
   border-radius: 50%;
   animation: pulse 2s infinite;
 }
-
+/* Animation */
 @keyframes pulse {
   0% {
     opacity: 1;
