@@ -22,10 +22,10 @@ export function ContactPage({ navigate }: ContactPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     toast.success('Thank you! We will get back to you within 24 hours.');
     setFormData({ name: '', email: '', subject: '', message: '' });
     setIsSubmitting(false);
@@ -111,8 +111,8 @@ export function ContactPage({ navigate }: ContactPageProps) {
                   </div>
                   <div className="method-content">
                     <h3 className="method-title">Email</h3>
-                    <p className="method-detail">support@carepro.com</p>
-                    <p className="method-detail">info@carepro.com</p>
+                    <p className="method-detail">support@elaniscare.com</p>
+                    <p className="method-detail">info@elaniscare.com</p>
                   </div>
                 </div>
 
@@ -306,9 +306,9 @@ export function ContactPage({ navigate }: ContactPageProps) {
           <div className="footer-content">
             <div className="footer-logo">
               <Heart className="logo-icon" />
-              <span className="logo-text">CarePro</span>
+              <span className="logo-text">ElAnis Care</span>
             </div>
-            <p className="footer-copyright">&copy; 2025 CarePro. All rights reserved. Built with ❤️ for better care.</p>
+            <p className="footer-copyright">&copy; 2025 ElAnis Care. All rights reserved. Built with ❤️ for better care.</p>
           </div>
         </div>
       </footer>
