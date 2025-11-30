@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { User } from '../App';
 import {
-  Home, UserCircle, Calendar as CalendarIcon, MapPin, FileText, DollarSign,
-  LogOut, Check, X, Clock, Star, Bell, Loader2, Pencil
+  Home, UserCircle, Users, FileText, CreditCard, Star, LogOut,
+  Search, MapPin, Clock, Pencil, CalendarIcon, X, Bell, DollarSign, Loader2,
+  Phone, Mail, Check, Award, Clock3, CheckCircle, AlertCircle, CalendarDays, Edit, Camera
 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { toast } from 'sonner';
@@ -925,17 +926,34 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
     const statusText = ((r as any).statusText || (r as any).statusName || String(r.status || '')).toString().toLowerCase();
     return Number((r as any).status) === 5 || statusText.includes('inprogress') || statusText.includes('in process') || statusText.includes('in-progress');
   };
-
+  ////////////////////////////////////////////////////////////////////////////////////////
   const statusStyles = {
-    1: { backgroundColor: '#F3F4F6', color: '#111827' },
-    2: { backgroundColor: '#3B82F6', color: '#FFFFFF' },
-    3: { backgroundColor: '#EF4444', color: '#FFFFFF' },
-    4: { backgroundColor: '#10B981', color: '#FFFFFF' },
-    5: { backgroundColor: '#F59E0B', color: '#111827' },
-    6: { backgroundColor: '#8B5CF6', color: '#FFFFFF' },
-    7: { backgroundColor: '#F97316', color: '#FFFFFF' },
-    8: { backgroundColor: '#EC4899', color: '#FFFFFF' },
+    1: { backgroundColor: '#f3f4f6', color: '#374151', icon: <Clock3 className="status-icon" /> },
+    2: { backgroundColor: '#dbeafe', color: '#1e40af', icon: <Clock className="status-icon" /> },
+    3: { backgroundColor: '#fef3c7', color: '#92400e', icon: <AlertCircle className="status-icon" /> },
+    4: { backgroundColor: '#dcfce7', color: '#166534', icon: <CheckCircle className="status-icon" /> },
+    5: { backgroundColor: '#ecfdf5', color: '#047857', icon: <Award className="status-icon" /> },
+    6: { backgroundColor: '#faf5ff', color: '#7c3aed', icon: <CheckCircle className="status-icon" /> },
+    7: { backgroundColor: '#fef2f2', color: '#dc2626', icon: <AlertCircle className="status-icon" /> },
+    8: { backgroundColor: '#fef2f2', color: '#dc2626', icon: <AlertCircle className="status-icon" /> },
   };
+
+  const getStatusBadge = (status: number, statusName: string) => {
+    const style = statusStyles[status] || {
+      backgroundColor: '#f3f4f6',
+      color: '#374151',
+      icon: <AlertCircle className="status-icon" />
+    };
+
+    return (
+      <div className="status-badge " style={{ backgroundColor: style.backgroundColor, color: style.color, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <span>{style.icon}</span>
+        <span>{statusName}</span>
+      </div>
+    );
+  };
+  /////////////////////////////////////////////////////////////////
+
 
   return (
     <div className="provider-dashboard">
@@ -943,7 +961,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       <header className="provider-header">
         <div className="provider-header-inner">
           <h2 className="provider-header-title">ElAnis Care - Provider</h2>
-          <div className="provider-header-actions">
+          <div className="pr o vider-header-actions">
             <button className="provider-notification-btn">
               <Bell className="provider-notification-icon" />
               {pendingRequests > 0 && (
@@ -1531,12 +1549,10 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
                           <div className="provider-request-main">
                             <div className="provider-request-title">
                               <h4 className="provider-request-client">{request.clientName}</h4>
-                              {/* <Badge style={(statusStyles as any)[request.status]}>
-                                {request.statusText}
-                              </Badge> */}
-                              <span style={request.status === 6 ? { color: 'white', background: 'green', padding: '2px 5px', borderRadius: '5px' } : { color: 'white', background: 'blue', padding: '2px 5px', borderRadius: '5px' }}>
-                                {request.statusText}
-                              </span>
+
+                              <div>
+                                {getStatusBadge(request.status, request.statusName)}
+                              </div>
                             </div>
                             <div className="provider-request-meta-grid">
                               <p>📍 {request.address}</p>

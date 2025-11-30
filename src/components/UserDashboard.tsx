@@ -427,7 +427,7 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
     setShowRatingDialog(false);
     setSelectedRequestForRating(null);
   };
-
+////////////////////////////////////////////////////////////////////////////////////////
   const statusStyles = {
     1: { backgroundColor: '#f3f4f6', color: '#374151', icon: <Clock3 className="status-icon" /> },
     2: { backgroundColor: '#dbeafe', color: '#1e40af', icon: <Clock className="status-icon" /> },
@@ -453,7 +453,7 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
       </div>
     );
   };
-
+/////////////////////////////////////////////////////////////////
   const handleSearch = () => {
     setCurrentPage(1);
     fetchProviders();
