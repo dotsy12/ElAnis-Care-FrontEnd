@@ -928,25 +928,26 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
   };
   ////////////////////////////////////////////////////////////////////////////////////////
   const statusStyles = {
-    1: { backgroundColor: '#f3f4f6', color: '#374151', icon: <Clock3 className="status-icon" /> },
-    2: { backgroundColor: '#dbeafe', color: '#1e40af', icon: <Clock className="status-icon" /> },
-    3: { backgroundColor: '#fef3c7', color: '#92400e', icon: <AlertCircle className="status-icon" /> },
-    4: { backgroundColor: '#dcfce7', color: '#166534', icon: <CheckCircle className="status-icon" /> },
-    5: { backgroundColor: '#ecfdf5', color: '#047857', icon: <Award className="status-icon" /> },
-    6: { backgroundColor: '#faf5ff', color: '#7c3aed', icon: <CheckCircle className="status-icon" /> },
-    7: { backgroundColor: '#fef2f2', color: '#dc2626', icon: <AlertCircle className="status-icon" /> },
-    8: { backgroundColor: '#fef2f2', color: '#dc2626', icon: <AlertCircle className="status-icon" /> },
+    1: { backgroundColor: '#f3f4f6', width: 'auto', color: '#374151', icon: <Clock3 className="status-icon" /> },
+    2: { backgroundColor: '#dbeafe', width: 'auto', color: '#1e40af', icon: <Clock className="status-icon" /> },
+    3: { backgroundColor: '#fef3c7', width: 'auto', color: '#92400e', icon: <AlertCircle className="status-icon" /> },
+    4: { backgroundColor: '#dcfce7', width: 'auto', color: '#166534', icon: <CheckCircle className="status-icon" /> },
+    5: { backgroundColor: '#ecfdf5', width: 'auto', color: '#047857', icon: <Award className="status-icon" /> },
+    6: { backgroundColor: '#faf5ff', width: 'auto', color: '#7c3aed', icon: <CheckCircle className="status-icon" /> },
+    7: { backgroundColor: '#fef2f2', width: 'auto', color: '#dc2626', icon: <AlertCircle className="status-icon" /> },
+    8: { backgroundColor: '#fef2f2', width: 'auto', color: '#dc2626', icon: <AlertCircle className="status-icon" /> },
   };
 
   const getStatusBadge = (status: number, statusName: string) => {
     const style = statusStyles[status] || {
       backgroundColor: '#f3f4f6',
       color: '#374151',
-      icon: <AlertCircle className="status-icon" />
+      icon: <AlertCircle className="status-icon" />,
+      width: 'auto'
     };
 
     return (
-      <div className="status-badge " style={{ backgroundColor: style.backgroundColor, color: style.color, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="status-badge " style={{ width: style.width, backgroundColor: style.backgroundColor, color: style.color, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <span>{style.icon}</span>
         <span>{statusName}</span>
       </div>
@@ -961,7 +962,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       <header className="provider-header">
         <div className="provider-header-inner">
           <h2 className="provider-header-title">ElAnis Care - Provider</h2>
-          <div className="pr o vider-header-actions">
+          <div className="provider-header-actions">
             <button className="provider-notification-btn">
               <Bell className="provider-notification-icon" />
               {pendingRequests > 0 && (
