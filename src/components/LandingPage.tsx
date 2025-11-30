@@ -111,7 +111,7 @@ export function LandingPage({ navigate }: LandingPageProps) {
           <div className="hero-image-container">
             <div className="hero-image-wrapper">
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1559757175-0eb30cd8c063?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+                src="https://modo3.com/thumbs/fit630x300/158365/1498495217/%D9%85%D8%B9%D9%84%D9%88%D9%85%D8%A7%D8%AA_%D8%B9%D9%86_%D8%AA%D8%AE%D8%B5%D8%B5_%D8%A7%D9%84%D8%AA%D9%85%D8%B1%D9%8A%D8%B6.jpg"
                 alt="Doctor and patient in medical setting"
                 className="hero-image"
               />
@@ -201,19 +201,19 @@ export function LandingPage({ navigate }: LandingPageProps) {
           <div className="services-grid">
             {[
               {
-                image: "https://images.unsplash.com/photo-1519494080410-f9aa76cb4283?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=300&q=80",
+                image: "https://images.unsplash.com/photo-1584516150909-c43483ee7932?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=300&q=80",
                 title: "Elderly Care",
                 description: "Compassionate care for seniors including companionship and daily activities assistance",
                 features: ["Medication Management", "Personal Care", "Companionship"]
               },
               {
-                image: "https://images.unsplash.com/photo-1584516150909-c43483ee7932?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=300&q=80",
+                image: "https://benecarehospital.com/wp-content/uploads/2023/02/emale-pediatrician-vaccinates-little-baby-boy-immunization-children-concept-happy-little-boy.jpg",
                 title: "Child Care",
                 description: "Experienced nannies providing loving care and educational activities",
                 features: ["Educational Activities", "Safe Supervision", "Nutrition Support"]
               },
               {
-                image: "https://images.unsplash.com/photo-1584467735871-8db9ac8e5e3a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&h=300&q=80",
+                image: "https://ceufast.com/imgs/nursing_home_intake_400px.webp@",
                 title: "Home Nursing",
                 description: "Professional nursing services including wound care and health monitoring",
                 features: ["Wound Care", "Medication Admin", "Health Monitoring"]
