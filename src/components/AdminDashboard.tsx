@@ -1755,7 +1755,7 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
                     <Table className="payments-table">
                       <TableHeader className="table-header">
                         <TableRow className="table-header-row">
-                          <TableHead className="table-head">Transaction ID</TableHead>
+                          {/* <TableHead className="table-head">Transaction ID</TableHead> */}
                           <TableHead className="table-head">User</TableHead>
                           <TableHead className="table-head">Provider</TableHead>
                           <TableHead className="table-head">Date</TableHead>
@@ -1770,12 +1770,12 @@ export function AdminDashboard({ user, navigate, onLogout }: AdminDashboardProps
                             className="table-row"
                             style={{ animationDelay: `${index * 0.05}s` }}
                           >
-                            <TableCell className="table-cell admin-transaction-id">
+                            {/* <TableCell className="table-cell admin-transaction-id">
                               <div className="transaction-id-container">
                                 <span className="transaction-hash">#</span>
                                 {transaction.transactionId || transaction.id.substring(0, 8)}
                               </div>
-                            </TableCell>
+                            </TableCell> */}
                             <TableCell className="table-cell user-cell">
                               <div className="user-avatar-container">
                                 <div className="user-avatar-placeholder">
