@@ -141,7 +141,7 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
         
         if (idDocument) formDataToSend.append('IdDocument', idDocument);
         if (certificates[0]) formDataToSend.append('Certificate', certificates[0]);
-        if (cv) formDataToSend.append('CVPath', cv);
+        if (cv) formDataToSend.append('CV', cv);
         
         // Send single category ID
         formDataToSend.append('SelectedCategoryIds', formData.selectedCategory);
