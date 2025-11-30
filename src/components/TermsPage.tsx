@@ -37,7 +37,7 @@ export function TermsPage({ navigate }: TermsPageProps) {
           <div className="content-section">
             <h2 className="section-title">Agreement to Terms</h2>
             <p className="section-text">
-              By accessing and using CarePro, you agree to be bound by these Terms and Conditions and our Privacy Policy.
+              By accessing and using ElAnis Care, you agree to be bound by these Terms and Conditions and our Privacy Policy.
               If you do not agree to these terms, please do not use our platform.
             </p>
             <p className="section-text">
@@ -48,11 +48,11 @@ export function TermsPage({ navigate }: TermsPageProps) {
           <div className="content-section">
             <h2 className="section-title">Platform Description</h2>
             <p className="section-text">
-              CarePro is a platform that connects users seeking care services with qualified care providers. We facilitate
+              ElAnis Care is a platform that connects users seeking care services with qualified care providers. We facilitate
               the connection between users and providers but are not directly responsible for the services provided.
             </p>
             <p className="section-text">
-              CarePro acts as an intermediary and marketplace. The actual care services are provided by independent
+              ElAnis Care acts as an intermediary and marketplace. The actual care services are provided by independent
               caregivers who register on our platform.
             </p>
           </div>
@@ -111,7 +111,7 @@ export function TermsPage({ navigate }: TermsPageProps) {
           <div className="content-section">
             <h2 className="section-title">Verification and Background Checks</h2>
             <p className="section-text">
-              CarePro conducts background checks and verification of caregiver credentials. However, we cannot guarantee
+              ElAnis Care conducts background checks and verification of caregiver credentials. However, we cannot guarantee
               the accuracy of all information provided by caregivers or ensure specific outcomes of care services.
             </p>
             <p className="section-text">
@@ -131,7 +131,7 @@ export function TermsPage({ navigate }: TermsPageProps) {
               <li>Not defamatory or misleading</li>
             </ul>
             <p className="section-text">
-              CarePro reserves the right to remove reviews that violate these guidelines.
+              ElAnis Care reserves the right to remove reviews that violate these guidelines.
             </p>
           </div>
 
@@ -153,7 +153,7 @@ export function TermsPage({ navigate }: TermsPageProps) {
           <div className="content-section">
             <h2 className="section-title">Limitation of Liability</h2>
             <p className="section-text">
-              CarePro provides a platform to connect users with caregivers but does not employ caregivers or directly
+              ElAnis Care provides a platform to connect users with caregivers but does not employ caregivers or directly
               provide care services. To the fullest extent permitted by law:
             </p>
             <ul className="section-list">
@@ -192,8 +192,8 @@ export function TermsPage({ navigate }: TermsPageProps) {
           <div className="content-section">
             <h2 className="section-title">Intellectual Property</h2>
             <p className="section-text">
-              All content on the CarePro platform, including text, graphics, logos, and software, is the property of
-              CarePro and is protected by copyright and trademark laws. Users may not reproduce, distribute, or create
+              All content on the ElAnis Care platform, including text, graphics, logos, and software, is the property of
+              ElAnis Care and is protected by copyright and trademark laws. Users may not reproduce, distribute, or create
               derivative works without our express permission.
             </p>
           </div>
@@ -204,7 +204,7 @@ export function TermsPage({ navigate }: TermsPageProps) {
               For questions about these Terms and Conditions:
             </p>
             <ul className="contact-list">
-              <li>Email: legal@carepro.com</li>
+              <li>Email: legal@elaniscare.com</li>
               <li>Phone: +1 (555) 123-4567</li>
               <li>Address: 123 Care Street, New York, NY 10001</li>
             </ul>
@@ -212,7 +212,7 @@ export function TermsPage({ navigate }: TermsPageProps) {
 
           <div className="acknowledgement-section">
             <p className="acknowledgement-text">
-              By using CarePro, you acknowledge that you have read, understood, and agree to be bound by these
+              By using ElAnis Care, you acknowledge that you have read, understood, and agree to be bound by these
               Terms and Conditions.
             </p>
           </div>
@@ -224,9 +224,9 @@ export function TermsPage({ navigate }: TermsPageProps) {
         <div className="footer-container">
           <div className="footer-brand">
             <Heart className="footer-icon" />
-            <span className="footer-logo">CarePro</span>
+            <span className="footer-logo">ElAnis Care</span>
           </div>
-          <p className="footer-copyright">&copy; 2025 CarePro. All rights reserved.</p>
+          <p className="footer-copyright">&copy; 2025 ElAnis Care. All rights reserved.</p>
         </div>
       </footer>
     </div>

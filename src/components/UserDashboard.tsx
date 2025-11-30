@@ -626,7 +626,7 @@ export function UserDashboard({ user, navigate, onLogout }: UserDashboardProps) 
         <div className="header-container">
           <div className="header-brand">
             <div className="brand-logo">
-              <span className="logo-text">CarePro</span>
+              <span className="logo-text">ElAnis Care</span>
             </div>
           </div>
           <div className="header-user">

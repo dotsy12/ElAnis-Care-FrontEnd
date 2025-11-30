@@ -942,7 +942,7 @@ export function ProviderDashboard({ user, navigate, onLogout }: ProviderDashboar
       {/* Header Section */}
       <header className="provider-header">
         <div className="provider-header-inner">
-          <h2 className="provider-header-title">CarePro - Provider</h2>
+          <h2 className="provider-header-title">ElAnis Care - Provider</h2>
           <div className="provider-header-actions">
             <button className="provider-notification-btn">
               <Bell className="provider-notification-icon" />

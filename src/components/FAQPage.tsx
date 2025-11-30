@@ -32,15 +32,15 @@ export function FAQPage({ navigate }: FAQPageProps) {
       icon: MessageCircle,
       questions: [
         {
-          q: 'What is CarePro?',
-          a: 'CarePro is a trusted platform connecting families with verified, experienced caregivers for elderly care, child care, and home nursing services. We ensure quality, safety, and reliability in all our care services.',
+          q: 'What is ElAnis Care?',
+          a: 'ElAnis Care is a trusted platform connecting families with verified, experienced caregivers for elderly care, child care, and home nursing services. We ensure quality, safety, and reliability in all our care services.',
         },
         {
-          q: 'How does CarePro work?',
+          q: 'How does ElAnis Care work?',
           a: 'Users can search for caregivers based on their needs, location, and availability. Once you find a suitable caregiver, you can send a booking request, and upon acceptance, proceed with payment. After the service is completed, you can rate your experience.',
         },
         {
-          q: 'Is CarePro available in my area?',
+          q: 'Is ElAnis Care available in my area?',
           a: 'We currently operate in over 50 cities across the United States. You can search for caregivers by entering your city to see available providers in your area.',
         },
       ],
@@ -72,7 +72,7 @@ export function FAQPage({ navigate }: FAQPageProps) {
       icon: Shield,
       questions: [
         {
-          q: 'How do I become a caregiver on CarePro?',
+          q: 'How do I become a caregiver on ElAnis Care?',
           a: 'Click "Register as Provider" and complete the registration form with your professional details, experience, certifications, and CV. Our admin team will review your application and notify you of the approval status.',
         },
         {
@@ -245,7 +245,7 @@ export function FAQPage({ navigate }: FAQPageProps) {
                       {section.questions.map((faq, qIdx) => {
                         const questionId = `${idx}-${qIdx}`;
                         const isOpen = openQuestions.has(questionId);
-                        
+
                         return (
                           <div key={qIdx} className="question-item">
                             <button
@@ -261,7 +261,7 @@ export function FAQPage({ navigate }: FAQPageProps) {
                                 )}
                               </div>
                             </button>
-                            
+
                             {isOpen && (
                               <div className="question-answer">
                                 <p className="answer-text">{faq.a}</p>
@@ -327,7 +327,7 @@ export function FAQPage({ navigate }: FAQPageProps) {
               </div>
               <h3 className="help-title">Email Us</h3>
               <p className="help-description">Send us your questions and concerns</p>
-              <div className="help-email">support@carepro.com</div>
+              <div className="help-email">support@elaniscare.com</div>
             </div>
 
             <div className="help-card">
@@ -348,9 +348,9 @@ export function FAQPage({ navigate }: FAQPageProps) {
           <div className="footer-content">
             <div className="footer-logo">
               <Heart className="logo-icon" />
-              <span className="logo-text">CarePro</span>
+              <span className="logo-text">ElAnis Care</span>
             </div>
-            <p className="footer-copyright">&copy; 2025 CarePro. All rights reserved. Built with ❤️ for better care.</p>
+            <p className="footer-copyright">&copy; 2025 ElAnis Care. All rights reserved. Built with ❤️ for better care.</p>
           </div>
         </div>
       </footer>

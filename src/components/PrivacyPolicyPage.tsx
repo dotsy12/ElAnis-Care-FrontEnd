@@ -37,7 +37,7 @@ export function PrivacyPolicyPage({ navigate }: PrivacyPolicyPageProps) {
           <div className="privacy-policy-section">
             <h2 className="privacy-policy-section-title">Introduction</h2>
             <p className="privacy-policy-text">
-              At CarePro, we take your privacy seriously. This Privacy Policy explains how we collect, use,
+              At ElAnis Care, we take your privacy seriously. This Privacy Policy explains how we collect, use,
               disclose, and safeguard your information when you use our platform.
             </p>
             <p className="privacy-policy-text">
@@ -130,7 +130,7 @@ export function PrivacyPolicyPage({ navigate }: PrivacyPolicyPageProps) {
               <li>Export your data in a portable format</li>
             </ul>
             <p className="privacy-policy-text">
-              To exercise these rights, please contact us at privacy@carepro.com
+              To exercise these rights, please contact us at privacy@elaniscare.com
             </p>
           </div>
 
@@ -165,7 +165,7 @@ export function PrivacyPolicyPage({ navigate }: PrivacyPolicyPageProps) {
               If you have questions about this Privacy Policy, please contact us:
             </p>
             <ul className="privacy-policy-contact-list">
-              <li>Email: privacy@carepro.com</li>
+              <li>Email: privacy@elaniscare.com</li>
               <li>Phone: +1 (555) 123-4567</li>
               <li>Address: 123 Care Street, New York, NY 10001</li>
             </ul>
@@ -178,9 +178,9 @@ export function PrivacyPolicyPage({ navigate }: PrivacyPolicyPageProps) {
         <div className="privacy-policy-footer-content">
           <div className="privacy-policy-footer-logo">
             <Heart className="privacy-policy-heart-icon" />
-            <span className="privacy-policy-footer-brand">CarePro</span>
+            <span className="privacy-policy-footer-brand">ElAnis Care</span>
           </div>
-          <p className="privacy-policy-footer-copyright">&copy; 2025 CarePro. All rights reserved.</p>
+          <p className="privacy-policy-footer-copyright">&copy; 2025 ElAnis Care. All rights reserved.</p>
         </div>
       </footer>
     </div>

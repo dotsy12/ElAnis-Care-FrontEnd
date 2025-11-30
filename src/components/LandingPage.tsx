@@ -56,19 +56,19 @@ export function LandingPage({ navigate }: LandingPageProps) {
           <div className="hero-bg-circle-1"></div>
           <div className="hero-bg-circle-2"></div>
         </div>
-        
+
         <div className="hero-container">
           <div className="hero-content">
             <div className="trust-badge">
               <div className="pulse-dot"></div>
               <span>Trusted by 10,000+ families</span>
             </div>
-            
+
             <h1 className="hero-title">
-              Quality Care 
+              Quality Care
               <span className="gradient-text"> When You Need It</span>
             </h1>
-            
+
             <p className="hero-description">
               Connect with verified, experienced caregivers for elderly care, child care, and home nursing services. Book securely and with confidence.
             </p>
@@ -92,7 +92,7 @@ export function LandingPage({ navigate }: LandingPageProps) {
 
             <div className="hero-stats">
               <div className="avatar-group">
-                {[1,2,3,4].map((i) => (
+                {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="avatar">
                     {i}
                   </div>
@@ -107,7 +107,7 @@ export function LandingPage({ navigate }: LandingPageProps) {
               </div>
             </div>
           </div>
-          
+
           <div className="hero-image-container">
             <div className="hero-image-wrapper">
               <ImageWithFallback
@@ -117,7 +117,7 @@ export function LandingPage({ navigate }: LandingPageProps) {
               />
               <div className="image-overlay"></div>
             </div>
-            
+
             {/* Floating Cards */}
             <div className="floating-card verified-card">
               <div className="card-content">
@@ -130,7 +130,7 @@ export function LandingPage({ navigate }: LandingPageProps) {
                 </div>
               </div>
             </div>
-            
+
             <div className="floating-card experience-card">
               <div className="card-content">
                 <div className="card-title-large">15+</div>
@@ -147,12 +147,12 @@ export function LandingPage({ navigate }: LandingPageProps) {
           <div className="section-header">
             <div className="section-badge">
               <Shield className="badge-icon" />
-              Why Choose CarePro
+              Why Choose ElAnis Care
             </div>
             <h2 className="section-title">The Most Trusted Care Platform</h2>
             <p className="section-description">We combine technology with human touch to deliver exceptional care experiences</p>
           </div>
-          
+
           <div className="features-grid">
             {[
               {
@@ -197,7 +197,7 @@ export function LandingPage({ navigate }: LandingPageProps) {
             <h2 className="section-title">Comprehensive Care Solutions</h2>
             <p className="section-description">Professional care services tailored to your family's needs</p>
           </div>
-          
+
           <div className="services-grid">
             {[
               {
@@ -257,7 +257,7 @@ export function LandingPage({ navigate }: LandingPageProps) {
             <h2 className="section-title">Qualified Healthcare Professionals</h2>
             <p className="section-description">Meet our team of certified doctors, nurses, and caregivers</p>
           </div>
-          
+
           <div className="doctors-grid">
             {[
               {
@@ -314,11 +314,11 @@ export function LandingPage({ navigate }: LandingPageProps) {
                   <stat.icon className="icon" />
                 </div>
                 <div className="stat-number">
-                  <CountUp 
-                    end={stat.end} 
-                    duration={3} 
+                  <CountUp
+                    end={stat.end}
+                    duration={3}
                     decimals={stat.decimals || 0}
-                    enableScrollSpy 
+                    enableScrollSpy
                   />
                   {stat.suffix}
                 </div>
@@ -333,7 +333,7 @@ export function LandingPage({ navigate }: LandingPageProps) {
       <section className="cta-section">
         <div className="container">
           <h2 className="cta-title">Ready to Find Your Perfect Caregiver?</h2>
-          <p className="cta-description">Join thousands of families who trust CarePro for their care needs</p>
+          <p className="cta-description">Join thousands of families who trust ElAnis Care for their care needs</p>
           <div className="cta-buttons">
             <button
               onClick={() => navigate('register')}
@@ -360,19 +360,19 @@ export function LandingPage({ navigate }: LandingPageProps) {
                 <div className="logo-icon">
                   <Heart className="icon" />
                 </div>
-                <span className="logo-text">CarePro</span>
+                <span className="logo-text">ElAnis Care</span>
               </div>
               <p className="footer-description">
                 Your trusted platform for quality elderly, child, and home care services.
               </p>
             </div>
-            
+
             <div className="footer-column">
               <h4 className="footer-title">Quick Links</h4>
               <ul className="footer-links">
                 {['about', 'faq', 'contact'].map((item) => (
                   <li key={item}>
-                    <button 
+                    <button
                       onClick={() => navigate(item)}
                       className="footer-link"
                     >
@@ -382,13 +382,13 @@ export function LandingPage({ navigate }: LandingPageProps) {
                 ))}
               </ul>
             </div>
-            
+
             <div className="footer-column">
               <h4 className="footer-title">Legal</h4>
               <ul className="footer-links">
                 {['privacy', 'terms'].map((item) => (
                   <li key={item}>
-                    <button 
+                    <button
                       onClick={() => navigate(item)}
                       className="footer-link"
                     >
@@ -398,19 +398,19 @@ export function LandingPage({ navigate }: LandingPageProps) {
                 ))}
               </ul>
             </div>
-            
+
             <div className="footer-column">
               <h4 className="footer-title">Contact Info</h4>
               <ul className="footer-contact">
-                <li>support@carepro.com</li>
+                <li>support@elaniscare.com</li>
                 <li>+1 (555) 123-4567</li>
                 <li>123 Care Street, City</li>
               </ul>
             </div>
           </div>
-          
+
           <div className="footer-bottom">
-            <p>&copy; 2025 CarePro. All rights reserved. Built with ❤️ for better care.</p>
+            <p>&copy; 2025 ElAnis Care. All rights reserved. Built with ❤️ for better care.</p>
           </div>
         </div>
       </footer>

@@ -87,7 +87,7 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
 
   const handleFileUpload = (type: 'certificates' | 'cv', files: FileList | null) => {
     if (!files) return;
-    
+
     if (type === 'certificates') {
       setCertificates(prev => [...prev, ...Array.from(files)]);
       toast.success(`${files.length} certificate(s) added`);
@@ -138,11 +138,11 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
         formDataToSend.append('NationalId', formData.nationalId);
         formDataToSend.append('Experience', formData.experience);
         formDataToSend.append('HourlyRate', formData.hourlyRate);
-        
+
         if (idDocument) formDataToSend.append('IdDocument', idDocument);
         if (certificates[0]) formDataToSend.append('Certificate', certificates[0]);
         if (cv) formDataToSend.append('CVPath', cv);
-        
+
         // Send single category ID
         formDataToSend.append('SelectedCategoryIds', formData.selectedCategory);
       }
@@ -156,10 +156,10 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
 
       if (response.ok && result.succeeded) {
         toast.success(result.message || 'Registration successful!');
-        
+
         // Get userId from response
         const userId = accountType === 'user' ? result.data.id : result.data.userId;
-        
+
         // Navigate to OTP verification page
         navigate('verify-otp', {
           userId,
@@ -260,7 +260,7 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
             {accountType === 'user' ? 'User Registration' : 'Provider Registration'}
           </h2>
           <p className="form-subtitle">
-            {accountType === 'user' 
+            {accountType === 'user'
               ? 'Fill in your details to create your account'
               : 'Complete your professional profile to get started'
             }
@@ -585,8 +585,8 @@ export function RegistrationPage({ navigate }: RegistrationPageProps) {
               {isLoading
                 ? 'Registering...'
                 : accountType === 'provider'
-                ? 'Submit for Approval'
-                : 'Create Account'}
+                  ? 'Submit for Approval'
+                  : 'Create Account'}
             </button>
           </form>
 
