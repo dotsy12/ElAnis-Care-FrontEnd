@@ -85,7 +85,7 @@ function Calendar({
           border: 1px solid var(--calendar-border);
           border-radius: var(--calendar-radius);
           box-shadow: var(--calendar-shadow);
-          max-width: 360px;
+          max-width: 300px;
           font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
             sans-serif;
           color: var(--calendar-text);
