@@ -814,6 +814,7 @@
   width: 18px;
   height: 18px;
   animation: spin 1s linear infinite;
+  background-color: var(--primary);
 }
 
 .user-dashboard .button-icon {
